@@ -406,7 +406,7 @@ def main():
         try:
             article_html = http_get(href)
             title_it, teaser_it, published = extract_meta(article_html)
-            full_it = extract_fulltext(article_html)
+            full_it = extract_fulltext(article_html, url=href)
         except Exception as ex:
             print(f"[WARN] Article fetch failed {href}: {ex}", file=sys.stderr)
             title_it, teaser_it, published, full_it = "", "", datetime.now(timezone.utc).isoformat(), ""

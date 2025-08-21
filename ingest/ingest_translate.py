@@ -1,9 +1,18 @@
 import os, json, time, sys, re
 from datetime import datetime, timezone
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from urllib.parse import urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
+
+# Try to import trafilatura for robust article extraction.
+# If unavailable, we'll fall back to BeautifulSoup heuristics.
+try:
+    import trafilatura  # type: ignore
+    HAS_TRAFILATURA = True
+except Exception:
+    HAS_TRAFILATURA = False
 
 # ==============================
 # CONFIG (tweak via env if needed)
@@ -27,11 +36,14 @@ SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.0"))
 TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "30"))
 
 # How many links to consider vs. fully enrich (open article page)
-MAX_LINKS_FROM_LISTINGS = int(os.getenv("MAX_LINKS_FROM_LISTINGS", "60"))
-MAX_ARTICLE_ENRICH      = int(os.getenv("MAX_ARTICLE_ENRICH", "20"))
+MAX_LINKS_FROM_LISTINGS = int(os.getenv("MAX_LINKS_FROM_LISTINGS", "50"))
+MAX_ARTICLE_ENRICH      = int(os.getenv("MAX_ARTICLE_ENRICH", "25"))  # we'll translate full text for these
+
+# Translation chunk size (avoid API payload limits)
+TRANSLATE_CHARS_PER_CHUNK = int(os.getenv("TRANSLATE_CHARS_PER_CHUNK", "900"))
 
 UA_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/2.1; +https://github.com/your/repo)",
+    "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/3.0; +https://github.com/your/repo)",
     "Accept-Language": "it,en;q=0.9",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
@@ -105,7 +117,7 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
         if md and md.get("content"):
             teaser = md["content"].strip()
         else:
-            main = soup.find("article") or soup.select_one(".article, .post, .entry-content")
+            main = soup.find("article") or soup.select_one(".article, .post, .entry-content, .content, .news-content")
             if main:
                 p = main.find("p")
                 if p:
@@ -131,11 +143,37 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
 
     return title, teaser, published_iso
 
+def extract_fulltext(article_html: str) -> str:
+    """Use trafilatura if available; otherwise heuristic extraction."""
+    if HAS_TRAFILATURA:
+        try:
+            txt = trafilatura.extract(article_html, include_comments=False, include_tables=False) or ""
+            return txt.strip()
+        except Exception:
+            pass
+    # Heuristic fallback
+    soup = BeautifulSoup(article_html, "lxml")
+    main = soup.find("article") or soup.select_one(".article, .post, .entry-content, .content, .news-content, .content-article")
+    if not main:
+        main = soup.body
+    if not main:
+        return ""
+    # collect paragraphs
+    paras = []
+    for p in main.find_all(["p", "h2", "h3", "li"]):
+        text = p.get_text(" ", strip=True)
+        if len(text) >= 5:
+            paras.append(text)
+    # remove very short/boilerplate tails
+    if paras and len(paras[-1]) < 20:
+        paras = paras[:-1]
+    return "\n\n".join(paras).strip()
+
 def hashlib_md5(s: str) -> str:
     import hashlib as _h
     return _h.md5(s.encode("utf-8")).hexdigest()
 
-def translate(text: str, source="it", target="en") -> str:
+def translate_once(text: str, source="it", target="en") -> str:
     """Try LibreTranslate; if it fails, try MyMemory; else return original."""
     if not text:
         return ""
@@ -171,6 +209,33 @@ def translate(text: str, source="it", target="en") -> str:
     # 3) Give up—return original
     return text
 
+def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRANSLATE_CHARS_PER_CHUNK) -> str:
+    """Split long text into chunks to avoid API limits, translate piecewise, then join."""
+    if not long_text:
+        return ""
+    chunks = []
+    current = []
+    current_len = 0
+    for para in long_text.split("\n\n"):
+        p = para.strip()
+        if not p:
+            continue
+        if current_len + len(p) + 2 <= chunk_chars:
+            current.append(p)
+            current_len += len(p) + 2
+        else:
+            chunks.append("\n\n".join(current))
+            current = [p]
+            current_len = len(p)
+    if current:
+        chunks.append("\n\n".join(current))
+
+    out_parts = []
+    for c in chunks:
+        out_parts.append(translate_once(c, source=source, target=target))
+        time.sleep(SLEEP_BETWEEN_CALLS)
+    return "\n\n".join(out_parts)
+
 # Optional: make English titles look nicer
 ACRONYMS = {"psg", "uefa", "fifa", "var", "usa", "uk", "napoli", "milan", "roma", "inter"}
 def nice_en_title(s: str) -> str:
@@ -190,8 +255,27 @@ def nice_en_title(s: str) -> str:
     s2 = " ".join(out).replace(" - ", " — ")
     return s2
 
-def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: str, source_url: str, published_iso: str) -> str:
-    # Simple static page. We link back to source for full text (copyright-safe).
+def html_paragraphs(text: str) -> str:
+    """Turn plain text with blank-line paragraphs into <p> blocks."""
+    if not text:
+        return ""
+    parts = [f"<p>{x}</p>" for x in text.split("\n\n") if x.strip()]
+    return "\n    ".join(parts)
+
+def render_post_html(
+    title_en: str,
+    title_it: str,
+    teaser_en: str,
+    teaser_it: str,
+    full_en: str,
+    full_it: str,
+    source_url: str,
+    published_iso: str
+) -> str:
+    # Simple static page. We link back to source for full text reference.
+    full_en_html = html_paragraphs(full_en) if full_en else ""
+    full_it_html = html_paragraphs(full_it) if full_it else ""
+
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -206,19 +290,27 @@ def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: st
     }}
     .src-note {{ color:#9fb0c5; font-size:0.9rem; margin-top: 8px; }}
     .date {{ color:#9fb0c5; font-size:.95rem; margin:6px 0 14px; }}
+    .muted {{ color:#9fb0c5; }}
   </style>
 </head>
 <body>
   <main style="max-width: 920px; margin: 24px auto; padding: 0 16px;">
     <h1 style="margin-bottom:4px;">{title_en}</h1>
     <p class="date">Published: {published_iso}</p>
+
     {"<p>"+teaser_en+"</p>" if teaser_en else ""}
+
+    {"<h3>Article</h3>" if full_en_html else ""}
+    {full_en_html}
+
     <p class="src-note">Source (Italian): <a href="{source_url}" target="_blank" rel="noopener noreferrer">{source_url}</a></p>
-    <p><a class="btn" href="{source_url}" target="_blank" rel="noopener noreferrer">Read full article on FCInterNews</a></p>
+    <p><a class="btn" href="{source_url}" target="_blank" rel="noopener noreferrer">Read original on FCInterNews</a></p>
+
     <hr style="border:0;border-top:1px solid #1f2630;margin:24px 0;">
     <details>
-      <summary>Show original (Italian) teaser</summary>
-      {"<p>"+teaser_it+"</p>" if teaser_it else "<p>(no teaser available)</p>"}
+      <summary>Show original (Italian) teaser/body</summary>
+      {"<p>"+teaser_it+"</p>" if teaser_it else "<p class='muted'>(no teaser available)</p>"}
+      {("<h4>Testo originale</h4>"+full_it_html) if full_it_html else ""}
     </details>
   </main>
 </body>
@@ -247,26 +339,31 @@ def main():
 
     items: List[Dict] = []
 
-    # 2) Enrich a subset by fetching article pages (OG title/desc/date)
+    # 2) Enrich a subset by fetching article pages (OG meta + full text)
     for href in links[:MAX_ARTICLE_ENRICH]:
         try:
             article_html = http_get(href)
             title_it, teaser_it, published = extract_meta(article_html)
+            full_it = extract_fulltext(article_html)
         except Exception as ex:
-            print(f("[WARN] Article fetch failed {href}: {ex}"), file=sys.stderr)
-            title_it, teaser_it, published = "", "", datetime.now(timezone.utc).isoformat()
+            print(f"[WARN] Article fetch failed {href}: {ex}", file=sys.stderr)
+            title_it, teaser_it, published, full_it = "", "", datetime.now(timezone.utc).isoformat(), ""
 
         # translate + tidy
-        title_en = nice_en_title(translate(title_it))
+        title_en = nice_en_title(translate_once(title_it))
         time.sleep(SLEEP_BETWEEN_CALLS)
-        teaser_en = translate(teaser_it) if teaser_it else ""
+
+        teaser_en = translate_once(teaser_it) if teaser_it else ""
         if teaser_it:
             time.sleep(SLEEP_BETWEEN_CALLS)
+
+        full_en = translate_chunked(full_it) if full_it else ""
+        # no extra sleep: translate_chunked already sleeps per chunk
 
         post_id = hashlib_md5(href)
         post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
         with open(post_path, "w", encoding="utf-8") as f:
-            f.write(render_post_html(title_en, title_it, teaser_en, teaser_it, href, published))
+            f.write(render_post_html(title_en, title_it, teaser_en, teaser_it, full_en, full_it, href, published))
 
         items.append({
             "id": post_id,
@@ -285,13 +382,14 @@ def main():
     for href in links[MAX_ARTICLE_ENRICH:]:
         slug = urlparse(href).path.rstrip("/").split("/")[-1].replace("-", " ").strip()
         title_it = slug if slug else href
-        title_en = nice_en_title(translate(title_it))
+        title_en = nice_en_title(translate_once(title_it))
         time.sleep(SLEEP_BETWEEN_CALLS)
 
+        # No full text for these lightweight pages
         post_id = hashlib_md5(href)
         post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
         with open(post_path, "w", encoding="utf-8") as f:
-            f.write(render_post_html(title_en, title_it, "", "", href, now_iso))
+            f.write(render_post_html(title_en, title_it, "", "", "", "", href, now_iso))
 
         items.append({
             "id": post_id,

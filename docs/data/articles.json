@@ -1,8 +1,19 @@
 {
   "source": "FCInterNews (Italian)",
-  "generated_utc": "2025-08-21T20:08:35.247874+00:00",
+  "generated_utc": "2025-08-21T20:26:44.807576+00:00",
   "count": 60,
   "articles": [
+    {
+      "id": "db13146c14744f5d0cbfef4548f40ba3",
+      "feed": "listing",
+      "url": "https://www.fcinternews.it/news/ballotta-c-e-il-rischio-di-un-altro-anno-senza-scudetto-napoli-attrezzato-milan-e-juve-migliorate-989615",
+      "local_url": "posts/db13146c14744f5d0cbfef4548f40ba3.html",
+      "title_it": "ballotta c e il rischio di un altro anno senza scudetto napoli attrezzato milan e juve migliorate 989615",
+      "title_en": "Ballot and the Risk of Another Year Without the Naples Shield Equipped With MILAN and Improved Juve 989615",
+      "summary_it": "",
+      "summary_en": "",
+      "published": "2025-08-21T20:24:58.197837+00:00"
+    },
     {
       "id": "585fdf558d36ceb7c1460b22599d7547",
       "feed": "listing",
@@ -12,7 +23,7 @@
       "title_en": "I on the day i san Siro Places for Disabled Exhausted After a Minute the Protest of the Fans and the Response of the INTER 989595",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "8112ecf3be0890f61f2e375d4104c62a",
@@ -23,7 +34,7 @@
       "title_en": "Last Days of the Market at the Sheraton MILAN san Siro Marotta Participates in the Round Table on the Sustainability of the System 989620",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "e038c7181420ca54eaa73beff550e264",
@@ -34,7 +45,7 @@
       "title_en": "PSG l Enrique we Want to be Unpredictable That's why we are Making Decisions That may be Difficult to Understand 989607",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "0ece126439fdcfe4be0606dcc06083fd",
@@ -45,7 +56,7 @@
       "title_en": "Binds Series to Returns the Stopiracy Campaign for the First and Second day Data 989600",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "f321c5ef1ba30b44a4b975844e77c126",
@@ -56,7 +67,7 @@
       "title_en": "I Corsera i san Siro Double Front Between Pedestrians and Ultras Appeals Already Failed There are no Interlocutors in Curve 989594",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "697db97db5343e9b54e1de8c5dbbc390",
@@ -67,7 +78,7 @@
       "title_en": "I the Republic i san Siro to Date the Votes in the Council for the Resolution are There but There is the Shadow of the Power of Attorney 989588",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "2b735da176de0084a0fa6dd9a4ed51c0",
@@ -78,7 +89,7 @@
       "title_en": "Christmas Soles Like all INTER and as Tops but Serve Important Offers 989593",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "907ca26c5a273bfe88ca06215aea3d36",
@@ -89,7 +100,7 @@
       "title_en": "Serene to the Limits of the Panic Attack With the Argentine the Gaffe With the Daughter of Bags 989576",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "59c5be90639e5308d52782952001b4bd",
@@ -100,18 +111,7 @@
       "title_en": "I sky Sport de i Edson Alvarez Said That at Fenerbahce the Mexican was Also Followed by INTER and Ajax 989597",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
-    },
-    {
-      "id": "7ba76f1ff58bfc6bf1ea3f2a7c1f4ae4",
-      "feed": "listing",
-      "url": "https://www.fcinternews.it/news/ufficiale-sector-no-limits-diventa-official-timekeeper-dell-inter-entusiasti-di-questo-nuovo-capitolo-989591",
-      "local_url": "posts/7ba76f1ff58bfc6bf1ea3f2a7c1f4ae4.html",
-      "title_it": "ufficiale sector no limits diventa official timekeeper dell inter entusiasti di questo nuovo capitolo 989591",
-      "title_en": "Official Sector no Limits Becomes Official Timekeeper of the INTER Enthusiasts of This new Chapter 989591",
-      "summary_it": "",
-      "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "2754b677afa85dcc7dbe411f5e89e36e",
@@ -122,7 +122,7 @@
       "title_en": "The Villarreal a Step Away From the Renato Veiga the Iberian Club Approaches the Requests of the Chelsea 989548",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "bfd483a98f1d5d507cd0d06a22e8ae2d",
@@ -133,7 +133,7 @@
       "title_en": "Fontanarosa Note Dell 'avellino the Defender Signed a Three-year Contract With the Biancoverdi 989525",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "6bf519124aee2ec07b2e4cde61b7f546",
@@ -144,7 +144,7 @@
       "title_en": "Como is Looking for a Goalkeeper Fabregas Would Like Inaki Penalty but in the List c e Also Filip Stankovic 989522",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "05ccd1b03aacd34265bf6dc00aad10e4",
@@ -155,7 +155,7 @@
       "title_en": "I From UK i l INTER ci Test for Guehi Probed the Ground to Take it to Zero in Summer 989490",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "b43476fd12ce1044bbe76474a1b54d3d",
@@ -166,7 +166,7 @@
       "title_en": "I rmc Sport i Does not Sell Adrien Rabiot l Olympique Marsiglia Asks About 15 Million 989480",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "591b11219e4c646c1ee46bcda90cb3a5",
@@ -177,7 +177,7 @@
       "title_en": "Palacios Rayo Vallecano Puts the Arrow in Agreement With l INTER Superato l Olympiacos 989478",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "69c816e435cba12734510319030c18c4",
@@ -188,7 +188,7 @@
       "title_en": "I si i Chapter Asllani the Road Between INTER and Bologna and Track we are Looking for the Definitive Picture 989418",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "f084f01bba8af7baf90fc580fb0cf427",
@@ -199,7 +199,7 @@
       "title_en": "The Lookman Expected in Zingonia on Wednesday as the Future for Nigerian 989417",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "6fac3c5f065930deb9c61743d00b9e33",
@@ -210,7 +210,7 @@
       "title_en": "Who Will be a Roman Lookman Some Premier League Clubs are Starting to Call 989413",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "9f97b260e2ef0be160829f9d930b266c",
@@ -221,7 +221,7 @@
       "title_en": "Salute l 'inter Amadou Sarr l 2004 Class Striker Definitively Passes to the Albinoleffe 989410",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "e1425239860ad42203bd963ccfacbca0",
@@ -232,7 +232,7 @@
       "title_en": "I l Team i Andy Diouf all INTER Imminent Business Ready a Five-year Lens 20 Million Euros Plus Bonus 989613",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "169a14e2d3547f29ed035201636a2500",
@@ -243,7 +243,7 @@
       "title_en": "I sky i INTER Verbal Agreement With the Lens for Andy Diouf Deal Outright Player Tomorrow in MILAN 989610",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "0304ecc17fd32179dd5caf7d72319c32",
@@ -254,7 +254,7 @@
       "title_en": "L INTER Tick a new Name in Midfield Ready 25 Million Euros for Andy Diouf Passed Naples 989609",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "1ecb07c97e66d7c9b05ae3c94721e0d2",
@@ -265,7 +265,7 @@
       "title_en": "Roman Asllani al Turino Figures Confirmed for INTER Also on the 20th on the Future Resale in Case of Redemption 989606",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "80485694fba6f1db9d6b10ea6054bb3d",
@@ -276,7 +276,7 @@
       "title_en": "Asllani Turin and Made an Exchange of Documents in Progress and Visits in the Next Hours 989603",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "45df602fb3aaca8dacd2bb8de13dde35",
@@ -287,7 +287,7 @@
       "title_en": "I tmw i Asllani Ever Closer to Turin Loan With Conditional Obligation the Figures of the Operation 989583",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "d8e87867ef5b6735dfa6ded8d2f6170b",
@@ -298,7 +298,7 @@
       "title_en": "I gds i l INTER Covers its two Mister x to Avoid More Jokes After Lookman and Kone 80 Million to be Able to Spend 989571",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "727fcd780e7645a98261f5a233e1e975",
@@ -309,7 +309,7 @@
       "title_en": "I sky i Asllani Aimed at a Step Between INTER and Turin Tomorrow new Contacts to Close the Operation 989570",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "64e6ef6af082345ad35cd4649bcfbede",
@@ -320,7 +320,7 @@
       "title_en": "I sky i Asllani Bologna no Agreement on the Engagement now and Closer to the Turin Here is the Proposal 989559",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "3feecdb5901aaaf2f059907a81cb87b8",
@@ -331,7 +331,7 @@
       "title_en": "Case Rabiot Benatia Back you do not Come Back a Club for him we Will Find the Phone Rings From Tuesday 989553",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "dc89a7d9bfa81b53be2b160f5fe156e5",
@@ -342,7 +342,7 @@
       "title_en": "I cf i l INTER Chooses Diouf for the Midfield the Impact on the Balance Sheet of the Operation 989621",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "99e2e0eef93f6d6a467424e641dbe56b",
@@ -353,7 +353,7 @@
       "title_en": "INTER Monday the Series Debut Against the Turin Date and Time of the Conference of Chivu 989623",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "5332359596c70dc7944f50d6c2674ea4",
@@ -364,7 +364,7 @@
       "title_en": "De Winter Difficile say no to MILAN INTER i Read Things but Nothing Serious 989617",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "76fa42e07e7459a96f5d80425b786732",
@@ -375,7 +375,7 @@
       "title_en": "Sticks i Have no Doubt That it Will go Well With Chivu Here is What has Changed With Respect to the Management of Slopes 989611",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "23f657fc3a320408c2d29cc6276ec33a",
@@ -386,7 +386,7 @@
       "title_en": "I the Press the Asllani al Turino in the Evening Scheduled the Official Albanian Ready for the Competition of the Former With l INTER 989608",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "ffcc5e8ed077d7c71095342bd7bf6161",
@@ -397,7 +397,7 @@
       "title_en": "Chivu and the Debut With Turin the Sense of Responsibility Will Hide my Emotions Bonny Works Hard to Improve 989605",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "e427605e4f7cf8de400ad7edf69d22ee",
@@ -408,7 +408,7 @@
       "title_en": "Zanetti Lautaro and Already a Flag of the INTER Chivu Must be Supported Inside and Outside the Nico paz and Fabregas Field 989602",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "060c13b398af64b1ed79f3a9d0621e90",
@@ -419,7 +419,7 @@
       "title_en": "Official INTER u23 in Attack Arrives Antonino la Gumina the Formula of the Transfer 989601",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "852ab721f1b2e39a889e2c695b205095",
@@ -430,7 +430,7 @@
       "title_en": "INTER the Neom Nonspring for Pavard Galtier is Trying to Convince the French Defender 989598",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "9b26c28776a477a391fd426eb58b1265",
@@ -441,18 +441,7 @@
       "title_en": "The cds i Shines the sun on the Accounts of the INTER Merit of Oaktree and of the Route all the Numbers 989578",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-21T20:07:10.740935+00:00"
-    },
-    {
-      "id": "2c67528542757181733542283266515b",
-      "feed": "article",
-      "url": "https://m.fcinternews.it/news/ballotta-c-e-il-rischio-di-un-altro-anno-senza-scudetto-napoli-attrezzato-milan-e-juve-migliorate-989615",
-      "local_url": "posts/2c67528542757181733542283266515b.html",
-      "title_it": "Ballotta: \"C'è il rischio di un altro anno senza Scudetto: Napoli attrezzato, Milan e Juve migliorate\"",
-      "title_en": "Ballotta: \"There is a Risk of Another Year Without the Scudetto: NAPOLI Equipped, MILAN and Juventus Improved\"",
-      "summary_it": "L&#39;ex veterano della porta Marco Ballotta ha parlato di alcuni temi riguardanti il calcio italiano in un&rsquo;intervista rilasciata a News.Superscommesse.it. Nell&#39;estratto seguente, l&#39;ex...",
-      "summary_en": "Former goalkeeper veteran Marco Ballotta spoke about some issues regarding Italian football in an interview with News.Superscommesse.it. In the following excerpt, the former...",
-      "published": "2025-08-21T20:07:04.117598+00:00"
+      "published": "2025-08-21T20:24:58.197837+00:00"
     },
     {
       "id": "ca62d1dd4c1015edc47a48a98c38a5ff",
@@ -463,7 +452,7 @@
       "title_en": "Di Chiara: \"Are you Offering 45 Million for pio Esposito? so Years ago Hubner was Worth 50.”",
       "summary_it": "Intervenendo su TMW Radio, Alberto Di Chiara, ex difensore di Roma, Fiorentina e Parma, fa luce su alcune anomalie dell&#39;attuale sistema calcio: &quot;Il livello della Serie A &egrave; cambiato, ma...",
       "summary_en": "Speaking on TMW Radio, Alberto Di Chiara, former defender of Roma, Fiorentina and Parma, sheds light on some anomalies in the current football system: \"The level of Serie A has changed, but...",
-      "published": "2025-08-21T20:06:56.865118+00:00"
+      "published": "2025-08-21T20:24:48.050541+00:00"
     },
     {
       "id": "1519ceb357e09bd38e9cee8b57194f2e",
@@ -474,7 +463,7 @@
       "title_en": "Dear on the Scudetto Fight: \"Juventus at Year Zero, INTER is Still Incomplete\"",
       "summary_it": "&quot;Troppi stranieri mediocri in circolazione e mancanza di spazi per i giovani&quot;. &Egrave; uno dei pensieri espressi da Claudio Gentile durante l&#39;intervista concessa a Il Fatto Quotidiano,...",
       "summary_en": "“Too many mediocre foreigners around and lack of space for young people.” It is one of the thoughts expressed by Claudio Gentile during the interview granted to Il Fatto Quotidiano,...",
-      "published": "2025-08-21T20:06:50.143119+00:00"
+      "published": "2025-08-21T20:24:41.798618+00:00"
     },
     {
       "id": "aa25f8cc03620e836f4e2411327d520b",
@@ -485,7 +474,7 @@
       "title_en": "Cremonese, Bianchetti: \"San Siro is a Special Stadium, for me the Emotions Will be Double\"",
       "summary_it": "Sabato sera, Matteo Bianchetti torner&agrave; a San Siro con la maglia della Cremonese, per la gara tra i grigiorossi e il Milan. Intervenuto in conferenza stampa, il capitano della Cremo non nasconde...",
       "summary_en": "On Saturday night, Matteo Bianchetti will return to San Siro with the Cremonese jersey, for the match between the grey-reds and Milan. Speaking at a press conference, the captain of the Cremo did not hide...",
-      "published": "2025-08-21T20:06:42.877942+00:00"
+      "published": "2025-08-21T20:24:35.795482+00:00"
     },
     {
       "id": "8fc9d619ff9de9ca9b9f843393a98cb0",
@@ -496,7 +485,18 @@
       "title_en": "Juventus Women, Canzi: \"Winning Against Como and INTER Women in the Women's cup has Given us Confidence\"",
       "summary_it": "Il primo impegno ufficiale della stagione della Juventus Women sar&agrave; contro il Parma nella prima giornata della Serie A Women&#39;s Cup. Raggiunto dai canali ufficiali del club bianconero, il...",
       "summary_en": "Juventus Women's first official match of the season will be against Parma on the first day of the Serie A Women's Cup. Reached by the official channels of the Bianconeri club, the...",
-      "published": "2025-08-21T20:06:35.931785+00:00"
+      "published": "2025-08-21T20:24:28.362508+00:00"
+    },
+    {
+      "id": "2e62340fa7e8305a5c20404633362a8a",
+      "feed": "article",
+      "url": "https://m.fcinternews.it/il-resto-della-a/conference-league-fiorentina-sul-velluto-3-0-in-trasferta-al-polissya-kean-si-fa-espellere-989637",
+      "local_url": "posts/2e62340fa7e8305a5c20404633362a8a.html",
+      "title_it": "Conference League, Fiorentina sul velluto: 3-0 in trasferta al Polissya. Kean si fa espellere",
+      "title_en": "Conference League, Fiorentina on Velvet: 3-0 Away to Polissya. Kean Gets Himself Expelled",
+      "summary_it": "Tutto facile per la Fiorentina che ha vinto nettamente 3-0 l&rsquo;andata dei playoff di Conference League contro gli ucraini del Polissya. La formazione Viola parte subito forte con Kean che provoca...",
+      "summary_en": "Everything was easy for Fiorentina, who won 3-0 in the first leg of the Conference League playoffs against the Polissya Ukrainians. The Viola formation immediately starts strong with Kean causing...",
+      "published": "2025-08-21T20:24:22.142473+00:00"
     },
     {
       "id": "4ddb2d41fe76cdd49031b460c37cf164",
@@ -507,7 +507,7 @@
       "title_en": "VIDEO — Asllani-Torino, After the Medical Examinations It's Time to Sign: \"i Can't Wait\"",
       "summary_it": "&quot;Non vedo l&#39;ora, poi ne parleremo&quot;. Sono queste le uniche parole pronunciate da Kristjan Asllani ai microfoni di Sky Sport nei pressi dello stadio Filadelfia, a pochi minuti dalla firma...",
       "summary_en": "“I can't wait, then we'll talk about it.” These are the only words spoken by Kristjan Asllani to the Sky Sport microphones near the Philadelphia stadium, a few minutes after the signing...",
-      "published": "2025-08-21T20:06:28.462453+00:00"
+      "published": "2025-08-21T20:24:15.680819+00:00"
     },
     {
       "id": "c46be6374202a1eaf80e66516777e024",
@@ -518,7 +518,7 @@
       "title_en": "Tomorrow is the First Interist day of Diouf: From Disembarkation to Medical Examinations, the Program",
       "summary_it": "Quella di domani sar&agrave; la prima giornata nerazzurra di&nbsp;Andy&nbsp;Diouf. Il centrocampista francese, promesso sposo dell&#39;Inter, sbarcher&agrave; domani all&#39;aeroporto di Linate in...",
       "summary_en": "Tomorrow will be Andy Diouf's first Nerazzurri day. The French midfielder, fiancé of Inter, will disembark tomorrow at Linate airport in...",
-      "published": "2025-08-21T20:06:21.019829+00:00"
+      "published": "2025-08-21T20:24:09.159186+00:00"
     },
     {
       "id": "e538b43e1355d6bc97b2c5848457a835",
@@ -529,7 +529,7 @@
       "title_en": "Sticks: \"When you Lose There are two Roads. the new Ones Have Quality, Chivu a Great Surprise on the Human Level\"",
       "summary_it": "Lunga intervista per il difensore Alessandro Bastoni ai microfoni di Sky Sport Insider. Il difensore nerazzurro torna sui rimpianti relativi alla passata stagione: &ldquo;Dopo le delusioni del finale...",
       "summary_en": "Long interview for defender Alessandro Bastoni on Sky Sport Insider microphones. The Nerazzurri defender returns to the regrets of last season: \"After the disappointments of the final...",
-      "published": "2025-08-21T20:05:50.013390+00:00"
+      "published": "2025-08-21T20:23:54.623571+00:00"
     },
     {
       "id": "016b6aed1b27b56540e5ec6c25221c49",
@@ -540,7 +540,7 @@
       "title_en": "Sky — Andy Diouf Ready to Marry Inter: the Frenchman is Expected Tomorrow in MILAN for Medical Examinations and Signing",
       "summary_it": "Andy&nbsp;Diouf &egrave; pronto a sposare l&#39;Inter. In giornata il club nerazzurro ha trovato l&#39;accordo col Lens per il trasferimento a titolo definitivo del centrocampista in nerazzurro:...",
       "summary_en": "Andy Diouf is ready to marry Inter. During the day, the Nerazzurri club reached an agreement with Lens for the permanent transfer of the midfielder to Nerazzurri:...",
-      "published": "2025-08-21T20:05:42.961031+00:00"
+      "published": "2025-08-21T20:23:47.958148+00:00"
     },
     {
       "id": "0e71d5410e70b6d6cbdf0a28a497c0f9",
@@ -551,18 +551,7 @@
       "title_en": "Sky — Inter, the Incoming Market Does not Stop at Diouf: a Defender Will Also Arrive in Milan. Even Without Sales",
       "summary_it": "La campagna acquisti dell&#39;Inter non finir&agrave; con l&#39;arrivo di Andy&nbsp;Diouf, atteso domani a Milano per le visite mediche dopo la chiusura della trattativa con il Lens (affare da circa...",
       "summary_en": "Inter's purchase campaign will not end with the arrival of Andy Diouf, expected tomorrow in Milan for medical examinations after the conclusion of negotiations with lens (a deal from about...",
-      "published": "2025-08-21T20:05:36.160615+00:00"
-    },
-    {
-      "id": "db13146c14744f5d0cbfef4548f40ba3",
-      "feed": "article",
-      "url": "https://www.fcinternews.it/news/ballotta-c-e-il-rischio-di-un-altro-anno-senza-scudetto-napoli-attrezzato-milan-e-juve-migliorate-989615",
-      "local_url": "posts/db13146c14744f5d0cbfef4548f40ba3.html",
-      "title_it": "Ballotta: \"C'è il rischio di un altro anno senza Scudetto: Napoli attrezzato, Milan e Juve migliorate\"",
-      "title_en": "Ballotta: \"There is a Risk of Another Year Without the Scudetto: NAPOLI Equipped, MILAN and Juventus Improved\"",
-      "summary_it": "L&#39;ex veterano della porta Marco Ballotta ha parlato di alcuni temi riguardanti il calcio italiano in un&rsquo;intervista rilasciata a News.Superscommesse.it. Nell&#39;estratto seguente, l&#39;ex...",
-      "summary_en": "Former goalkeeper veteran Marco Ballotta spoke about some issues regarding Italian football in an interview with News.Superscommesse.it. In the following excerpt, the former...",
-      "published": "2025-08-21T20:05:29.023337+00:00"
+      "published": "2025-08-21T20:23:41.440512+00:00"
     },
     {
       "id": "3db5a7d921e2a6d9f13c865f87c29bbd",
@@ -573,7 +562,7 @@
       "title_en": "Di Chiara: \"Are you Offering 45 Million for pio Esposito? so Years ago Hubner was Worth 50.”",
       "summary_it": "Intervenendo su TMW Radio, Alberto Di Chiara, ex difensore di Roma, Fiorentina e Parma, fa luce su alcune anomalie dell&#39;attuale sistema calcio: &quot;Il livello della Serie A &egrave; cambiato, ma...",
       "summary_en": "Speaking on TMW Radio, Alberto Di Chiara, former defender of Roma, Fiorentina and Parma, sheds light on some anomalies in the current football system: \"The level of Serie A has changed, but...",
-      "published": "2025-08-21T20:05:21.563581+00:00"
+      "published": "2025-08-21T20:23:30.312397+00:00"
     },
     {
       "id": "e3e783fb8ffbcaf14dd1a16117bc4996",
@@ -584,7 +573,7 @@
       "title_en": "Dear on the Scudetto Fight: \"Juventus at Year Zero, INTER is Still Incomplete\"",
       "summary_it": "&quot;Troppi stranieri mediocri in circolazione e mancanza di spazi per i giovani&quot;. &Egrave; uno dei pensieri espressi da Claudio Gentile durante l&#39;intervista concessa a Il Fatto Quotidiano,...",
       "summary_en": "“Too many mediocre foreigners around and lack of space for young people.” It is one of the thoughts expressed by Claudio Gentile during the interview granted to Il Fatto Quotidiano,...",
-      "published": "2025-08-21T20:05:14.830522+00:00"
+      "published": "2025-08-21T20:23:23.951119+00:00"
     },
     {
       "id": "5de2ddf53f245b295c7df1352f93e5f9",
@@ -595,7 +584,7 @@
       "title_en": "Cremonese, Bianchetti: \"San Siro is a Special Stadium, for me the Emotions Will be Double\"",
       "summary_it": "Sabato sera, Matteo Bianchetti torner&agrave; a San Siro con la maglia della Cremonese, per la gara tra i grigiorossi e il Milan. Intervenuto in conferenza stampa, il capitano della Cremo non nasconde...",
       "summary_en": "On Saturday night, Matteo Bianchetti will return to San Siro with the Cremonese jersey, for the match between the grey-reds and Milan. Speaking at a press conference, the captain of the Cremo did not hide...",
-      "published": "2025-08-21T20:05:08.074554+00:00"
+      "published": "2025-08-21T20:23:17.798375+00:00"
     },
     {
       "id": "41a98888b18def3bb8c2e2aba50b259f",
@@ -606,7 +595,18 @@
       "title_en": "Juventus Women, Canzi: \"Winning Against Como and INTER Women in the Women's cup has Given us Confidence\"",
       "summary_it": "Il primo impegno ufficiale della stagione della Juventus Women sar&agrave; contro il Parma nella prima giornata della Serie A Women&#39;s Cup. Raggiunto dai canali ufficiali del club bianconero, il...",
       "summary_en": "Juventus Women's first official match of the season will be against Parma on the first day of the Serie A Women's Cup. Reached by the official channels of the Bianconeri club, the...",
-      "published": "2025-08-21T20:05:01.333167+00:00"
+      "published": "2025-08-21T20:23:10.481033+00:00"
+    },
+    {
+      "id": "3a1a7e2dfa05ad10a575f17ec4732fe7",
+      "feed": "article",
+      "url": "https://www.fcinternews.it/il-resto-della-a/conference-league-fiorentina-sul-velluto-3-0-in-trasferta-al-polissya-kean-si-fa-espellere-989637",
+      "local_url": "posts/3a1a7e2dfa05ad10a575f17ec4732fe7.html",
+      "title_it": "Conference League, Fiorentina sul velluto: 3-0 in trasferta al Polissya. Kean si fa espellere",
+      "title_en": "Conference League, Fiorentina on Velvet: 3-0 Away to Polissya. Kean Gets Himself Expelled",
+      "summary_it": "Tutto facile per la Fiorentina che ha vinto nettamente 3-0 l&rsquo;andata dei playoff di Conference League contro gli ucraini del Polissya. La formazione Viola parte subito forte con Kean che provoca...",
+      "summary_en": "Everything was easy for Fiorentina, who won 3-0 in the first leg of the Conference League playoffs against the Polissya Ukrainians. The Viola formation immediately starts strong with Kean causing...",
+      "published": "2025-08-21T20:23:04.381374+00:00"
     },
     {
       "id": "d018bdc3814230d1a90f548b1ab36a05",
@@ -617,7 +617,7 @@
       "title_en": "VIDEO — Asllani-Torino, After the Medical Examinations It's Time to Sign: \"i Can't Wait\"",
       "summary_it": "&quot;Non vedo l&#39;ora, poi ne parleremo&quot;. Sono queste le uniche parole pronunciate da Kristjan Asllani ai microfoni di Sky Sport nei pressi dello stadio Filadelfia, a pochi minuti dalla firma...",
       "summary_en": "“I can't wait, then we'll talk about it.” These are the only words spoken by Kristjan Asllani to the Sky Sport microphones near the Philadelphia stadium, a few minutes after the signing...",
-      "published": "2025-08-21T20:04:54.417694+00:00"
+      "published": "2025-08-21T20:22:58.340601+00:00"
     },
     {
       "id": "aae5ad18699cfa6db854fdb985309395",
@@ -628,7 +628,7 @@
       "title_en": "Tomorrow is the First Interist day of Diouf: From Disembarkation to Medical Examinations, the Program",
       "summary_it": "Quella di domani sar&agrave; la prima giornata nerazzurra di&nbsp;Andy&nbsp;Diouf. Il centrocampista francese, promesso sposo dell&#39;Inter, sbarcher&agrave; domani all&#39;aeroporto di Linate in...",
       "summary_en": "Tomorrow will be Andy Diouf's first Nerazzurri day. The French midfielder, fiancé of Inter, will disembark tomorrow at Linate airport in...",
-      "published": "2025-08-21T20:04:47.424650+00:00"
+      "published": "2025-08-21T20:22:52.041869+00:00"
     },
     {
       "id": "8ddd3b99f46f64e832411f121691d3fb",
@@ -639,7 +639,7 @@
       "title_en": "Sticks: \"When you Lose There are two Roads. the new Ones Have Quality, Chivu a Great Surprise on the Human Level\"",
       "summary_it": "Lunga intervista per il difensore Alessandro Bastoni ai microfoni di Sky Sport Insider. Il difensore nerazzurro torna sui rimpianti relativi alla passata stagione: &ldquo;Dopo le delusioni del finale...",
       "summary_en": "Long interview for defender Alessandro Bastoni on Sky Sport Insider microphones. The Nerazzurri defender returns to the regrets of last season: \"After the disappointments of the final...",
-      "published": "2025-08-21T20:04:40.733645+00:00"
+      "published": "2025-08-21T20:22:36.547390+00:00"
     },
     {
       "id": "78d57cba689fce155d69231ded2e6c10",
@@ -650,7 +650,7 @@
       "title_en": "Sky — Andy Diouf Ready to Marry Inter: the Frenchman is Expected Tomorrow in MILAN for Medical Examinations and Signing",
       "summary_it": "Andy&nbsp;Diouf &egrave; pronto a sposare l&#39;Inter. In giornata il club nerazzurro ha trovato l&#39;accordo col Lens per il trasferimento a titolo definitivo del centrocampista in nerazzurro:...",
       "summary_en": "Andy Diouf is ready to marry Inter. During the day, the Nerazzurri club reached an agreement with Lens for the permanent transfer of the midfielder to Nerazzurri:...",
-      "published": "2025-08-21T20:04:33.454892+00:00"
+      "published": "2025-08-21T20:22:29.125121+00:00"
     },
     {
       "id": "9655dcbb8af4ac3f438ed50c113ea8ad",
@@ -661,7 +661,7 @@
       "title_en": "Sky — Inter, the Incoming Market Does not Stop at Diouf: a Defender Will Also Arrive in Milan. Even Without Sales",
       "summary_it": "La campagna acquisti dell&#39;Inter non finir&agrave; con l&#39;arrivo di Andy&nbsp;Diouf, atteso domani a Milano per le visite mediche dopo la chiusura della trattativa con il Lens (affare da circa...",
       "summary_en": "Inter's purchase campaign will not end with the arrival of Andy Diouf, expected tomorrow in Milan for medical examinations after the conclusion of negotiations with lens (a deal from about...",
-      "published": "2025-08-21T20:04:10.856148+00:00"
+      "published": "2025-08-21T20:21:54.907028+00:00"
     }
   ]
 }

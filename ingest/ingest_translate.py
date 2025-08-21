@@ -304,11 +304,14 @@ def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRAN
 
 # Title niceness
 ACRONYMS = {"psg", "uefa", "fifa", "var", "usa", "uk", "napoli", "milan", "roma", "inter"}
+
 def nice_en_title(s: str) -> str:
     if not s:
         return s
-    s = re.sub(r"^\s*(video|foto)\s*[—-:]\s*", "", s, flags=re.IGNORECASE)  # drop VIDEO/FOTO prefix
+    # Remove leading "VIDEO —", "FOTO –", "Video:" etc.
+    s = re.sub(r"^\s*(?:video|foto)\s*[\-–—:]\s*", "", s, flags=re.IGNORECASE)  # hyphen escaped/placed safely
     s = re.sub(r"\s+", " ", s).strip()
+
     words = s.split(" ")
     out = []
     for i, w in enumerate(words):
@@ -319,7 +322,9 @@ def nice_en_title(s: str) -> str:
             out.append(w[:1].upper() + w[1:])
         else:
             out.append(w[:1].upper() + w[1:] if len(w) > 3 else lw)
+
     return " ".join(out).replace(" - ", " — ")
+
 
 def html_paragraphs(text: str) -> str:
     if not text:

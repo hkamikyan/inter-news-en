@@ -17,18 +17,18 @@ LISTING_URLS: List[str] = [
     "https://www.fcinternews.it/focus/",
 ]
 
-# Output lives in /docs so GitHub Pages can serve it (Pages set to /docs)
+# Output in /docs so GitHub Pages serves it (Pages set to /docs)
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
-POSTS_DIR = os.path.join(os.path.dirname(__file__), "..", "docs", "posts")
+POSTS_DIR   = os.path.join(os.path.dirname(__file__), "..", "docs", "posts")
 
 LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.com/translate")
 SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.0"))
 TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "30"))
 
-# How many links in total to collect from all listings; how many to enrich by opening article pages
+# How many links total to collect from listings; how many to enrich (open article page)
 MAX_LINKS_FROM_LISTINGS = int(os.getenv("MAX_LINKS_FROM_LISTINGS", "60"))
-MAX_ARTICLE_ENRICH = int(os.getenv("MAX_ARTICLE_ENRICH", "20"))
+MAX_ARTICLE_ENRICH      = int(os.getenv("MAX_ARTICLE_ENRICH", "20"))
 
 UA_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/2.0; +https://github.com/your/repo)",
@@ -40,15 +40,14 @@ UA_HEADERS = {
 # Accept articles that end with -<5+ digits> (observed article pattern)
 ARTICLE_TAIL = re.compile(r"-\d{5,}/?$")
 EXCLUDE_FIRST_SEGMENTS = {"web-tv", "sondaggi", "calendario_classifica", "tag", "topic", "categoria", "category", "gallery"}
-ALLOW_FIRST_SEGMENTS = {"news", "mercato", "in-primo-piano", "focus"}  # typical article sections
-
+ALLOW_FIRST_SEGMENTS   = {"news", "mercato", "in-primo-piano", "focus"}  # typical article sections
 
 # ==============================
 # HELPERS
 # ==============================
 def ensure_dirs():
     os.makedirs(OUTPUT_PATH, exist_ok=True)
-    os.makedirs(POSTS_DIR, exist_ok=True)
+    os.makedirs(POSTS_DIR,   exist_ok=True)
 
 def http_get(url: str) -> str:
     r = requests.get(url, headers=UA_HEADERS, timeout=TIMEOUT)
@@ -164,7 +163,7 @@ def translate(text: str, source="it", target="en") -> str:
     return text
 
 def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: str, source_url: str) -> str:
-    # Simple static page that you own. We link back to source for full text (copyright-safe).
+    # Simple static page. We link back to source for full text (copyright-safe).
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -194,7 +193,6 @@ def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: st
   </main>
 </body>
 </html>"""
-
 
 # ==============================
 # MAIN

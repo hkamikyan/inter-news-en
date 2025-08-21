@@ -17,7 +17,7 @@ LISTING_URLS: List[str] = [
     "https://www.fcinternews.it/focus/",
 ]
 
-# Output in /docs so GitHub Pages serves it (Pages set to /docs)
+# Output lives in /docs so GitHub Pages can serve it
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
 POSTS_DIR   = os.path.join(os.path.dirname(__file__), "..", "docs", "posts")
@@ -26,21 +26,20 @@ LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.com
 SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.0"))
 TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "30"))
 
-# How many links total to collect from listings; how many to enrich (open article page)
+# How many links to consider vs. fully enrich (open article page)
 MAX_LINKS_FROM_LISTINGS = int(os.getenv("MAX_LINKS_FROM_LISTINGS", "60"))
 MAX_ARTICLE_ENRICH      = int(os.getenv("MAX_ARTICLE_ENRICH", "20"))
 
 UA_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/2.0; +https://github.com/your/repo)",
+    "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/2.1; +https://github.com/your/repo)",
     "Accept-Language": "it,en;q=0.9",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
 # -------- URL filters ----------
-# Accept articles that end with -<5+ digits> (observed article pattern)
-ARTICLE_TAIL = re.compile(r"-\d{5,}/?$")
+ARTICLE_TAIL = re.compile(r"-\d{5,}/?$")  # ends with -<id>
 EXCLUDE_FIRST_SEGMENTS = {"web-tv", "sondaggi", "calendario_classifica", "tag", "topic", "categoria", "category", "gallery"}
-ALLOW_FIRST_SEGMENTS   = {"news", "mercato", "in-primo-piano", "focus"}  # typical article sections
+ALLOW_FIRST_SEGMENTS   = {"news", "mercato", "in-primo-piano", "focus"}  # common sections
 
 # ==============================
 # HELPERS
@@ -63,7 +62,6 @@ def is_article_url(resolved_url: str) -> bool:
         return False
     if parts[0] in EXCLUDE_FIRST_SEGMENTS:
         return False
-    # Must end with -digits to avoid section hubs like /in-primo-piano/
     if not ARTICLE_TAIL.search(p.path):
         return False
     if parts[0] in ALLOW_FIRST_SEGMENTS or len(parts) >= 1:
@@ -88,6 +86,7 @@ def collect_article_links(base_url: str, html: str, cap: int, seen: set) -> List
     return out
 
 def extract_meta(article_html: str) -> Tuple[str, str, str]:
+    """Return (title_it, teaser_it, published_iso) using OG tags with fallbacks."""
     soup = BeautifulSoup(article_html, "lxml")
     title = ""
     teaser = ""
@@ -97,7 +96,7 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
     if ogt and ogt.get("content"):
         title = ogt["content"].strip()
 
-    # prefer og:description, else meta[name=description]
+    # prefer og:description, else meta[name=description], else first paragraph
     ogd = soup.find("meta", property="og:description")
     if ogd and ogd.get("content"):
         teaser = ogd["content"].strip()
@@ -105,14 +104,12 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
         md = soup.find("meta", attrs={"name": "description"})
         if md and md.get("content"):
             teaser = md["content"].strip()
-
-    # try a first paragraph in the main article body
-    if not teaser:
-        main = soup.find("article") or soup.select_one(".article, .post, .entry-content")
-        if main:
-            p = main.find("p")
-            if p:
-                teaser = p.get_text(" ", strip=True)
+        else:
+            main = soup.find("article") or soup.select_one(".article, .post, .entry-content")
+            if main:
+                p = main.find("p")
+                if p:
+                    teaser = p.get_text(" ", strip=True)
 
     ogtime = soup.find("meta", property="article:published_time")
     if ogtime and ogtime.get("content"):
@@ -133,7 +130,6 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
         teaser = teaser[:297] + "…"
 
     return title, teaser, published_iso
-
 
 def hashlib_md5(s: str) -> str:
     import hashlib as _h
@@ -175,40 +171,24 @@ def translate(text: str, source="it", target="en") -> str:
     # 3) Give up—return original
     return text
 
-ACRONYMS = {"psg", "uefa", "fifa", "var", "usa", "uk", "milano", "milan"}  # add more as needed
-
+# Optional: make English titles look nicer
+ACRONYMS = {"psg", "uefa", "fifa", "var", "usa", "uk", "napoli", "milan", "roma", "inter"}
 def nice_en_title(s: str) -> str:
     if not s:
         return s
-    # collapse whitespace
     s = re.sub(r"\s+", " ", s).strip()
-
-    # smart apostrophes for patterns like l' or dell'
-    s = s.replace(" l '", " l'").replace(" d '", " d'").replace(" L '", " L'").replace(" D '", " D'")
-    s = s.replace(" l’", " l'").replace(" d’", " d'")
-
-    # sentence-case except acronyms
     words = s.split(" ")
     out = []
-    for w in words:
+    for i, w in enumerate(words):
         lw = w.lower()
         if lw in ACRONYMS:
             out.append(lw.upper())
-        elif lw in {"i", "l'", "d'", "e", "di", "da", "del", "della"}:
-            # keep small words lowercase unless first token
-            out.append(lw)
+        elif i == 0:
+            out.append(w[:1].upper() + w[1:])
         else:
-            # capitalise first letter, leave rest as-is (preserve names)
-            out.append(w[0].upper() + w[1:] if w else w)
-    # Capitalise first token regardless
-    if out:
-        out[0] = out[0][0].upper() + out[0][1:] if out[0] else out[0]
-
-    tidy = " ".join(out)
-    # tidy dashes around translations
-    tidy = tidy.replace(" - ", " — ")
-    return tidy
-
+            out.append(w[:1].upper() + w[1:] if len(w) > 3 else lw)
+    s2 = " ".join(out).replace(" - ", " — ")
+    return s2
 
 def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: str, source_url: str, published_iso: str) -> str:
     # Simple static page. We link back to source for full text (copyright-safe).
@@ -225,11 +205,13 @@ def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: st
       background:#0e1218; color:#87b4ff; text-decoration:none; font-weight:600;
     }}
     .src-note {{ color:#9fb0c5; font-size:0.9rem; margin-top: 8px; }}
+    .date {{ color:#9fb0c5; font-size:.95rem; margin:6px 0 14px; }}
   </style>
 </head>
 <body>
   <main style="max-width: 920px; margin: 24px auto; padding: 0 16px;">
-    <h1 style="margin-bottom:8px;">{title_en}</h1>
+    <h1 style="margin-bottom:4px;">{title_en}</h1>
+    <p class="date">Published: {published_iso}</p>
     {"<p>"+teaser_en+"</p>" if teaser_en else ""}
     <p class="src-note">Source (Italian): <a href="{source_url}" target="_blank" rel="noopener noreferrer">{source_url}</a></p>
     <p><a class="btn" href="{source_url}" target="_blank" rel="noopener noreferrer">Read full article on FCInterNews</a></p>
@@ -263,19 +245,19 @@ def main():
     # Deduplicate and clamp
     links = list(dict.fromkeys(links))[:MAX_LINKS_FROM_LISTINGS]
 
-    # 2) Enrich a subset by fetching article pages (OG title/desc/date)
     items: List[Dict] = []
+
+    # 2) Enrich a subset by fetching article pages (OG title/desc/date)
     for href in links[:MAX_ARTICLE_ENRICH]:
         try:
             article_html = http_get(href)
             title_it, teaser_it, published = extract_meta(article_html)
         except Exception as ex:
-            print(f"[WARN] Article fetch failed {href}: {ex}", file=sys.stderr)
+            print(f("[WARN] Article fetch failed {href}: {ex}"), file=sys.stderr)
             title_it, teaser_it, published = "", "", datetime.now(timezone.utc).isoformat()
 
-        title_en_raw = translate(title_it)
-        title_en = nice_en_title(title_en_raw)
-        #title_en = translate(title_it)
+        # translate + tidy
+        title_en = nice_en_title(translate(title_it))
         time.sleep(SLEEP_BETWEEN_CALLS)
         teaser_en = translate(teaser_it) if teaser_it else ""
         if teaser_it:
@@ -284,7 +266,7 @@ def main():
         post_id = hashlib_md5(href)
         post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
         with open(post_path, "w", encoding="utf-8") as f:
-            f.write(render_post_html(title_en, title_it, teaser_en, teaser_it, href))
+            f.write(render_post_html(title_en, title_it, teaser_en, teaser_it, href, published))
 
         items.append({
             "id": post_id,
@@ -302,14 +284,14 @@ def main():
     now_iso = datetime.now(timezone.utc).isoformat()
     for href in links[MAX_ARTICLE_ENRICH:]:
         slug = urlparse(href).path.rstrip("/").split("/")[-1].replace("-", " ").strip()
-        title_it = slug.title() if slug else href
+        title_it = slug if slug else href
         title_en = nice_en_title(translate(title_it))
         time.sleep(SLEEP_BETWEEN_CALLS)
 
         post_id = hashlib_md5(href)
         post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
         with open(post_path, "w", encoding="utf-8") as f:
-            f.write(render_post_html(title_en, title_it, "", "", href))
+            f.write(render_post_html(title_en, title_it, "", "", href, now_iso))
 
         items.append({
             "id": post_id,

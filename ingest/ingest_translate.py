@@ -143,31 +143,93 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
 
     return title, teaser, published_iso
 
-def extract_fulltext(article_html: str) -> str:
-    """Use trafilatura if available; otherwise heuristic extraction."""
+def extract_fulltext(article_html: str, url: Optional[str] = None) -> str:
+    """Prefer trafilatura (with URL hints), then scrub boilerplate.
+    Falls back to heuristic extraction + scrub."""
+    text = ""
+
+    # --- A) Try trafilatura first ---
     if HAS_TRAFILATURA:
         try:
-            txt = trafilatura.extract(article_html, include_comments=False, include_tables=False) or ""
-            return txt.strip()
+            # Using the URL helps trafilatura apply site-specific rules
+            text = trafilatura.extract(
+                article_html,
+                include_comments=False,
+                include_tables=False,
+                url=url,
+            ) or ""
         except Exception:
-            pass
-    # Heuristic fallback
-    soup = BeautifulSoup(article_html, "lxml")
-    main = soup.find("article") or soup.select_one(".article, .post, .entry-content, .content, .news-content, .content-article")
-    if not main:
-        main = soup.body
-    if not main:
+            text = ""
+
+    # --- B) Heuristic fallback if needed ---
+    if not text:
+        soup = BeautifulSoup(article_html, "lxml")
+        # Try to aim at the main story container
+        main = (
+            soup.find("article")
+            or soup.select_one(
+                "[itemprop='articleBody'], .article, .article__content, "
+                ".post, .entry-content, .content, .news-content, .content-article"
+            )
+            or soup.body
+        )
+        paras = []
+        if main:
+            for el in main.find_all(["p", "h2", "h3", "li"]):
+                t = el.get_text(" ", strip=True)
+                if len(t) >= 5:
+                    paras.append(t)
+        text = "\n\n".join(paras)
+
+    # --- C) Scrub boilerplate common on fcinternews.it ---
+    if not text:
         return ""
-    # collect paragraphs
-    paras = []
-    for p in main.find_all(["p", "h2", "h3", "li"]):
-        text = p.get_text(" ", strip=True)
-        if len(text) >= 5:
-            paras.append(text)
-    # remove very short/boilerplate tails
-    if paras and len(paras[-1]) < 20:
-        paras = paras[:-1]
-    return "\n\n".join(paras).strip()
+
+    # 1) Stop at "Altre notizie" section (sidebar/related list)
+    STOP_MARKERS = [
+        "Altre notizie", "Altre notizie -", "ALTRE NOTIZIE",
+        "Leggi anche", "Potrebbe interessarti", "Articoli correlati"
+    ]
+    lowered = text.lower()
+    cutoff_idx = len(text)
+    for marker in STOP_MARKERS:
+        i = lowered.find(marker.lower())
+        if i != -1:
+            cutoff_idx = min(cutoff_idx, i)
+    text = text[:cutoff_idx].strip()
+
+    # 2) Drop lines that look like metadata or tickers
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+
+    META_PREFIXES = (
+        "Sezione:", "Data:", "Autore:", "Twitter:", "Redazione:",
+        "Fonte:", "Foto:", "Credit:", "Credits:", "Copyright"
+    )
+    # e.g., "- 21:45 ..." or "21:45 ..." (ticker rows)
+    TICKER_RE = re.compile(r"^(?:-?\s*)?\d{1,2}:\d{2}\b")
+
+    CLEAN = []
+    for ln in lines:
+        if any(ln.startswith(p) for p in META_PREFIXES):
+            continue
+        if TICKER_RE.match(ln):
+            continue
+        # Many headlines from sidebars have long hyphen-separated chains:
+        if ln.count(" - ") >= 2 and len(ln) > 120:
+            continue
+        # Repeated author line
+        if "Twitter:" in ln or "@" in ln and "Twitter" in ln:
+            continue
+        CLEAN.append(ln)
+
+    text = "\n\n".join(CLEAN).strip()
+
+    # 3) If still extremely long and clearly listy, keep first ~1200 chars
+    if len(text) > 8000:
+        text = text[:1200].rsplit("\n\n", 1)[0].strip()
+
+    return text
+
 
 def hashlib_md5(s: str) -> str:
     import hashlib as _h

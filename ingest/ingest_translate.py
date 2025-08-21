@@ -15,7 +15,7 @@ LISTING_URLS: List[str] = [
     "https://www.fcinternews.it/focus/",
 ]
 
-OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "site", "data")
+OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
 
 LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.com/translate")

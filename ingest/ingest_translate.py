@@ -162,6 +162,41 @@ def translate(text: str, source="it", target="en") -> str:
     # 3) Give up—return original
     return text
 
+ACRONYMS = {"psg", "uefa", "fifa", "var", "usa", "uk", "milano", "milan"}  # add more as needed
+
+def nice_en_title(s: str) -> str:
+    if not s:
+        return s
+    # collapse whitespace
+    s = re.sub(r"\s+", " ", s).strip()
+
+    # smart apostrophes for patterns like l' or dell'
+    s = s.replace(" l '", " l'").replace(" d '", " d'").replace(" L '", " L'").replace(" D '", " D'")
+    s = s.replace(" l’", " l'").replace(" d’", " d'")
+
+    # sentence-case except acronyms
+    words = s.split(" ")
+    out = []
+    for w in words:
+        lw = w.lower()
+        if lw in ACRONYMS:
+            out.append(lw.upper())
+        elif lw in {"i", "l'", "d'", "e", "di", "da", "del", "della"}:
+            # keep small words lowercase unless first token
+            out.append(lw)
+        else:
+            # capitalise first letter, leave rest as-is (preserve names)
+            out.append(w[0].upper() + w[1:] if w else w)
+    # Capitalise first token regardless
+    if out:
+        out[0] = out[0][0].upper() + out[0][1:] if out[0] else out[0]
+
+    tidy = " ".join(out)
+    # tidy dashes around translations
+    tidy = tidy.replace(" - ", " — ")
+    return tidy
+
+
 def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: str, source_url: str) -> str:
     # Simple static page. We link back to source for full text (copyright-safe).
     return f"""<!doctype html>

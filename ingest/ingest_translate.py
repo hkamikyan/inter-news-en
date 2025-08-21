@@ -7,16 +7,17 @@ from bs4 import BeautifulSoup
 
 # --- CONFIG ---
 FEED_URLS = [
-     "https://www.fcinternews.it/rss/"
-    # from FCInterNews’ RSS page.
+     #"https://www.fcinternews.it/rss/"
 ]
-HOMEPAGE_URLS = [
+
+HOMEPAGE_URLS: List[str] = [
     "https://www.fcinternews.it/",
-    "https://www.fcinternews.it/rss/"
+    "https://m.fcinternews.it/",
     "https://www.fcinternews.it/news/",
     "https://www.fcinternews.it/mercato/",
     "https://www.fcinternews.it/in-primo-piano/",
 ]
+
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "site", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
 
@@ -34,20 +35,43 @@ def md5(text: str) -> str:
     return hashlib.md5(text.encode("utf-8")).hexdigest()
 
 def translate(text: str, source="it", target="en") -> str:
+    """Try LibreTranslate; on any error, fall back to MyMemory; else return original text."""
     if not text:
         return ""
-    r = requests.post(
-        LIBRETRANSLATE_URL,
-        data={"q": text, "source": source, "target": target, "format": "text"},
-        timeout=30,
-    )
-    r.raise_for_status()
-    data = r.json()
-    if isinstance(data, dict) and "translatedText" in data:
-        return data["translatedText"]
-    if isinstance(data, list) and data and "translatedText" in data[0]:
-        return data[0]["translatedText"]
+    try:
+        r = requests.post(
+            LIBRETRANSLATE_URL,
+            data={"q": text, "source": source, "target": target, "format": "text"},
+            timeout=TIMEOUT,
+        )
+        if r.ok:
+            data = r.json()
+            if isinstance(data, dict) and "translatedText" in data:
+                return data["translatedText"]
+            if isinstance(data, list) and data and "translatedText" in data[0]:
+                return data[0]["translatedText"]
+        # If 4xx/5xx or unexpected payload, fall through to MyMemory
+    except Exception:
+        pass
+
+    # Fallback: MyMemory (free, no key). Rate limits are loose; we only translate titles.
+    try:
+        mm = requests.get(
+            "https://api.mymemory.translated.net/get",
+            params={"q": text, "langpair": f"{source}|{target}"},
+            timeout=TIMEOUT,
+        )
+        if mm.ok:
+            j = mm.json()
+            t = j.get("responseData", {}).get("translatedText")
+            if t:
+                return t
+    except Exception:
+        pass
+
+    # Last resort: return the original Italian so we still publish something.
     return text
+
 
 def fetch_feed(url: str) -> List[Dict]:
     feed = feedparser.parse(url)
@@ -121,6 +145,13 @@ def fetch_html(url: str) -> List[Dict]:
 def main():
     ensure_dirs()
     all_items = []
+
+
+
+    # 0) HTML first
+    for url in HOMEPAGE_URLS:
+         all_items.extend(fetch_html(url))
+
 
     # 1) Try RSS feeds (if any)
     for url in FEED_URLS:

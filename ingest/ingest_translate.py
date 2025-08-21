@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 # --- CONFIG ---
 FEED_URLS = [
-    # Leave empty for now, or paste any real RSS links you copy later
+     "https://www.fcinternews.it/rss/"
     # from FCInterNews’ RSS page.
 ]
 HOMEPAGE_URLS = [

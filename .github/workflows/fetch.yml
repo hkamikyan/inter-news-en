@@ -28,6 +28,8 @@ jobs:
         env:
           LIBRETRANSLATE_URL: "https://libretranslate.com/translate"
           TRANSLATE_SLEEP: "1.2"
+          MAX_LINKS_FROM_LISTINGS: "60"    # total links to consider
+          MAX_ARTICLE_ENRICH: "20"
         run: |
           python ingest/ingest_translate.py
 

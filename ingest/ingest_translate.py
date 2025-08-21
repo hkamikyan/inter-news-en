@@ -5,7 +5,9 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-# ------------ CONFIG ------------
+# ==============================
+# CONFIG (tweak via env if needed)
+# ==============================
 LISTING_URLS: List[str] = [
     "https://www.fcinternews.it/",
     "https://m.fcinternews.it/",
@@ -15,16 +17,18 @@ LISTING_URLS: List[str] = [
     "https://www.fcinternews.it/focus/",
 ]
 
+# Output lives in /docs so GitHub Pages can serve it (Pages set to /docs)
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
+POSTS_DIR = os.path.join(os.path.dirname(__file__), "..", "docs", "posts")
 
 LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.com/translate")
 SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.0"))
-TIMEOUT = 30
+TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "30"))
 
-# How many links to pull from listings (deduped), and how many to "enrich" by opening the article page
-MAX_LINKS_FROM_LISTINGS = int(os.getenv("MAX_LINKS_FROM_LISTINGS", "80"))
-MAX_ARTICLE_ENRICH = int(os.getenv("MAX_ARTICLE_ENRICH", "25"))
+# How many links in total to collect from all listings; how many to enrich by opening article pages
+MAX_LINKS_FROM_LISTINGS = int(os.getenv("MAX_LINKS_FROM_LISTINGS", "60"))
+MAX_ARTICLE_ENRICH = int(os.getenv("MAX_ARTICLE_ENRICH", "20"))
 
 UA_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/2.0; +https://github.com/your/repo)",
@@ -36,10 +40,15 @@ UA_HEADERS = {
 # Accept articles that end with -<5+ digits> (observed article pattern)
 ARTICLE_TAIL = re.compile(r"-\d{5,}/?$")
 EXCLUDE_FIRST_SEGMENTS = {"web-tv", "sondaggi", "calendario_classifica", "tag", "topic", "categoria", "category", "gallery"}
-ALLOW_FIRST_SEGMENTS = {"news", "mercato", "in-primo-piano", "focus"}  # allow top-level too
+ALLOW_FIRST_SEGMENTS = {"news", "mercato", "in-primo-piano", "focus"}  # typical article sections
 
+
+# ==============================
+# HELPERS
+# ==============================
 def ensure_dirs():
     os.makedirs(OUTPUT_PATH, exist_ok=True)
+    os.makedirs(POSTS_DIR, exist_ok=True)
 
 def http_get(url: str) -> str:
     r = requests.get(url, headers=UA_HEADERS, timeout=TIMEOUT)
@@ -55,46 +64,12 @@ def is_article_url(resolved_url: str) -> bool:
         return False
     if parts[0] in EXCLUDE_FIRST_SEGMENTS:
         return False
-    # Either it’s under an allowed section OR it’s a top-level article slug,
-    # BUT must end with -digits to avoid hubs like /in-primo-piano/
+    # Must end with -digits to avoid section hubs like /in-primo-piano/
     if not ARTICLE_TAIL.search(p.path):
         return False
     if parts[0] in ALLOW_FIRST_SEGMENTS or len(parts) >= 1:
         return True
     return False
-
-def translate(text: str, source="it", target="en") -> str:
-    """Try LibreTranslate; if it fails, try MyMemory; else return original."""
-    if not text:
-        return ""
-    try:
-        r = requests.post(
-            LIBRETRANSLATE_URL,
-            data={"q": text, "source": source, "target": target, "format": "text"},
-            timeout=TIMEOUT,
-        )
-        if r.ok:
-            data = r.json()
-            if isinstance(data, dict) and "translatedText" in data:
-                return data["translatedText"]
-            if isinstance(data, list) and data and "translatedText" in data[0]:
-                return data[0]["translatedText"]
-    except Exception:
-        pass
-    try:
-        mm = requests.get(
-            "https://api.mymemory.translated.net/get",
-            params={"q": text, "langpair": f"{source}|{target}"},
-            timeout=TIMEOUT,
-        )
-        if mm.ok:
-            j = mm.json()
-            t = j.get("responseData", {}).get("translatedText")
-            if t:
-                return t
-    except Exception:
-        pass
-    return text
 
 def collect_article_links(base_url: str, html: str, cap: int, seen: set) -> List[str]:
     soup = BeautifulSoup(html, "lxml")
@@ -128,7 +103,6 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
     if ogd and ogd.get("content"):
         teaser = ogd["content"].strip()
 
-    # Try article:published_time or time tags
     ogtime = soup.find("meta", property="article:published_time")
     if ogtime and ogtime.get("content"):
         published_iso = ogtime["content"].strip()
@@ -141,16 +115,90 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
             if h1:
                 title = h1.get_text(strip=True)
 
-    # If no published time found, use now (UTC)
     if not published_iso:
         published_iso = datetime.now(timezone.utc).isoformat()
 
-    # Trim teaser
     if teaser and len(teaser) > 300:
         teaser = teaser[:297] + "…"
 
     return title, teaser, published_iso
 
+def hashlib_md5(s: str) -> str:
+    import hashlib as _h
+    return _h.md5(s.encode("utf-8")).hexdigest()
+
+def translate(text: str, source="it", target="en") -> str:
+    """Try LibreTranslate; if it fails, try MyMemory; else return original."""
+    if not text:
+        return ""
+    # 1) LibreTranslate
+    try:
+        r = requests.post(
+            LIBRETRANSLATE_URL,
+            data={"q": text, "source": source, "target": target, "format": "text"},
+            timeout=TIMEOUT,
+        )
+        if r.ok:
+            data = r.json()
+            if isinstance(data, dict) and "translatedText" in data:
+                return data["translatedText"]
+            if isinstance(data, list) and data and "translatedText" in data[0]:
+                return data[0]["translatedText"]
+    except Exception:
+        pass
+    # 2) MyMemory fallback
+    try:
+        mm = requests.get(
+            "https://api.mymemory.translated.net/get",
+            params={"q": text, "langpair": f"{source}|{target}"},
+            timeout=TIMEOUT,
+        )
+        if mm.ok:
+            j = mm.json()
+            t = j.get("responseData", {}).get("translatedText")
+            if t:
+                return t
+    except Exception:
+        pass
+    # 3) Give up—return original
+    return text
+
+def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: str, source_url: str) -> str:
+    # Simple static page that you own. We link back to source for full text (copyright-safe).
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{title_en}</title>
+  <link rel="stylesheet" href="../styles.css"/>
+  <style>
+    .btn {{
+      display:inline-block; padding:10px 14px; border:1px solid #2a3240; border-radius:8px;
+      background:#0e1218; color:#87b4ff; text-decoration:none; font-weight:600;
+    }}
+    .src-note {{ color:#9fb0c5; font-size:0.9rem; margin-top: 8px; }}
+  </style>
+</head>
+<body>
+  <main style="max-width: 920px; margin: 24px auto; padding: 0 16px;">
+    <h1 style="margin-bottom:8px;">{title_en}</h1>
+    {"<p>"+teaser_en+"</p>" if teaser_en else ""}
+    <p class="src-note">Source (Italian): <a href="{source_url}" target="_blank" rel="noopener noreferrer">{source_url}</a></p>
+    <p><a class="btn" href="{source_url}" target="_blank" rel="noopener noreferrer">Read full article on FCInterNews</a></p>
+    <hr style="border:0;border-top:1px solid #1f2630;margin:24px 0;">
+    <details>
+      <summary>Show original (Italian) teaser</summary>
+      {"<p>"+teaser_it+"</p>" if teaser_it else "<p>(no teaser available)</p>"}
+    </details>
+  </main>
+</body>
+</html>"""
+
+
+# ==============================
+# MAIN
+# ==============================
 def main():
     ensure_dirs()
 
@@ -166,41 +214,35 @@ def main():
         except Exception as ex:
             print(f"[WARN] Listing fetch failed {url}: {ex}", file=sys.stderr)
 
-    # Deduplicate and clamp to overall max
+    # Deduplicate and clamp
     links = list(dict.fromkeys(links))[:MAX_LINKS_FROM_LISTINGS]
 
-    # 2) Enrich a subset by fetching article pages (for clean title/summary/date)
+    # 2) Enrich a subset by fetching article pages (OG title/desc/date)
     items: List[Dict] = []
     for href in links[:MAX_ARTICLE_ENRICH]:
         try:
             article_html = http_get(href)
+            title_it, teaser_it, published = extract_meta(article_html)
         except Exception as ex:
             print(f"[WARN] Article fetch failed {href}: {ex}", file=sys.stderr)
-            # Fallback minimal item if page fetch fails
-            items.append({
-                "id": hashlib_md5(href),
-                "feed": "listing",
-                "url": href,
-                "title_it": "",
-                "title_en": "",
-                "summary_it": "",
-                "summary_en": "",
-                "published": datetime.now(timezone.utc).isoformat(),
-            })
-            continue
+            title_it, teaser_it, published = "", "", datetime.now(timezone.utc).isoformat()
 
-        title_it, teaser_it, published = extract_meta(article_html)
         title_en = translate(title_it)
         time.sleep(SLEEP_BETWEEN_CALLS)
-        # If you want translated summaries too, uncomment the next two lines:
-        # teaser_en = translate(teaser_it) if teaser_it else ""
-        # time.sleep(SLEEP_BETWEEN_CALLS)
-        teaser_en = ""  # keep empty for speed/stability
+        teaser_en = translate(teaser_it) if teaser_it else ""
+        if teaser_it:
+            time.sleep(SLEEP_BETWEEN_CALLS)
+
+        post_id = hashlib_md5(href)
+        post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
+        with open(post_path, "w", encoding="utf-8") as f:
+            f.write(render_post_html(title_en, title_it, teaser_en, teaser_it, href))
 
         items.append({
-            "id": hashlib_md5(href),
+            "id": post_id,
             "feed": "article",
-            "url": href,
+            "url": href,                           # original (Italian)
+            "local_url": f"posts/{post_id}.html",  # your page
             "title_it": title_it,
             "title_en": title_en,
             "summary_it": teaser_it,
@@ -208,24 +250,32 @@ def main():
             "published": published,
         })
 
-    # 3) If we gathered fewer than requested, also include some *lightweight* items (title = URL slug)
-    if len(items) < len(links):
-        for href in links[len(items):]:
-            slug = urlparse(href).path.rstrip("/").split("/")[-1].replace("-", " ").strip()
-            title_it = slug.title() if slug else href
-            items.append({
-                "id": hashlib_md5(href),
-                "feed": "listing",
-                "url": href,
-                "title_it": title_it,
-                "title_en": translate(title_it),
-                "summary_it": "",
-                "summary_en": "",
-                "published": datetime.now(timezone.utc).isoformat(),
-            })
-            time.sleep(SLEEP_BETWEEN_CALLS)
+    # 3) For remaining links (not enriched), create minimal local pages with just titles
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for href in links[MAX_ARTICLE_ENRICH:]:
+        slug = urlparse(href).path.rstrip("/").split("/")[-1].replace("-", " ").strip()
+        title_it = slug.title() if slug else href
+        title_en = translate(title_it)
+        time.sleep(SLEEP_BETWEEN_CALLS)
 
-    # 4) Sort newest first (ISO timestamps sort fine lexicographically if always ISO8601)
+        post_id = hashlib_md5(href)
+        post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
+        with open(post_path, "w", encoding="utf-8") as f:
+            f.write(render_post_html(title_en, title_it, "", "", href))
+
+        items.append({
+            "id": post_id,
+            "feed": "listing",
+            "url": href,
+            "local_url": f"posts/{post_id}.html",
+            "title_it": title_it,
+            "title_en": title_en,
+            "summary_it": "",
+            "summary_en": "",
+            "published": now_iso,
+        })
+
+    # 4) Sort newest first and write payload
     items.sort(key=lambda x: x["published"], reverse=True)
 
     payload = {
@@ -239,10 +289,6 @@ def main():
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
     print(f"[INFO] Wrote {len(items)} items to {OUTPUT_FILE}")
-
-def hashlib_md5(s: str) -> str:
-    import hashlib as _h
-    return _h.md5(s.encode("utf-8")).hexdigest()
 
 if __name__ == "__main__":
     main()

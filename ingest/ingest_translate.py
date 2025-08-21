@@ -1,25 +1,31 @@
-import os, json, time, hashlib, sys
+import os, json, time, hashlib, sys, re
 from datetime import datetime, timezone
 from typing import List, Dict
 import feedparser
 import requests
+from bs4 import BeautifulSoup
 
 # --- CONFIG ---
 FEED_URLS = [
-    # Try the main RSS; if it 404s later, we'll add section feeds you find on the site.
-    "https://www.fcinternews.it/info_rss/",
-    # Example: add more once you locate them:
-    # "https://www.fcinternews.it/rss/mercato",
-    # "https://www.fcinternews.it/rss/news",
+    # Leave empty for now, or paste any real RSS links you copy later
+    # from FCInterNews’ RSS page.
+]
+HOMEPAGE_URLS = [
+    "https://www.fcinternews.it/",
+    "https://www.fcinternews.it/rss/"
+    "https://www.fcinternews.it/news/",
+    "https://www.fcinternews.it/mercato/",
+    "https://www.fcinternews.it/in-primo-piano/",
 ]
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "site", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
 
-# Free public LibreTranslate endpoint (no key). You can change later.
 LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.com/translate")
-SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "0.8"))  # be polite
-
+SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "0.8"))
 MAX_ITEMS_PER_FEED = int(os.getenv("MAX_ITEMS_PER_FEED", "50"))
+MAX_ITEMS_FROM_HTML = int(os.getenv("MAX_ITEMS_FROM_HTML", "30"))
+
+A_PATTERN = re.compile(r"^https://www\.fcinternews\.it/.+?-\d{5,}$")
 
 def ensure_dirs():
     os.makedirs(OUTPUT_PATH, exist_ok=True)
@@ -54,12 +60,10 @@ def fetch_feed(url: str) -> List[Dict]:
         if not published:
             published = datetime.now(timezone.utc).isoformat()
 
-        title_en = translate(title_it)
-        time.sleep(SLEEP_BETWEEN_CALLS)
-        summary_en = translate(summary_it) if summary_it else ""
-        time.sleep(SLEEP_BETWEEN_CALLS)
+        title_en = translate(title_it); time.sleep(SLEEP_BETWEEN_CALLS)
+        summary_en = translate(summary_it) if summary_it else ""; time.sleep(SLEEP_BETWEEN_CALLS)
 
-        item = {
+        items.append({
             "id": md5(link or title_it + published),
             "feed": url,
             "url": link,
@@ -68,28 +72,77 @@ def fetch_feed(url: str) -> List[Dict]:
             "summary_it": summary_it,
             "summary_en": summary_en,
             "published": published,
-        }
-        items.append(item)
+        })
     return items
+
+def fetch_html(url: str) -> List[Dict]:
+    out = []
+    html = requests.get(url, timeout=30).text
+    soup = BeautifulSoup(html, "lxml")
+
+    links = []
+    for a in soup.find_all("a", href=True):
+        href = a["href"].strip()
+        if A_PATTERN.match(href):
+            title = (a.get_text() or "").strip()
+            if title and (href, title) not in links:
+                links.append((href, title))
+
+    for href, title in links[:MAX_ITEMS_FROM_HTML]:
+        teaser = ""
+        a = soup.find("a", href=href)
+        parent = a.parent if a else None
+        if parent:
+            sibling_texts = []
+            for sib in list(parent.next_siblings)[:2] + list(parent.previous_siblings)[:2]:
+                if getattr(sib, "name", "") in ("p", "span", "div"):
+                    txt = (sib.get_text() or "").strip()
+                    if 30 <= len(txt) <= 240:
+                        sibling_texts.append(txt)
+            if sibling_texts:
+                teaser = sibling_texts[0]
+
+        published = datetime.now(timezone.utc).isoformat()
+        title_en = translate(title); time.sleep(SLEEP_BETWEEN_CALLS)
+        teaser_en = translate(teaser) if teaser else ""; time.sleep(SLEEP_BETWEEN_CALLS)
+
+        out.append({
+            "id": md5(href),
+            "feed": url,
+            "url": href,
+            "title_it": title,
+            "title_en": title_en,
+            "summary_it": teaser,
+            "summary_en": teaser_en,
+            "published": published,
+        })
+    return out
 
 def main():
     ensure_dirs()
     all_items = []
+
+    # 1) Try RSS feeds (if any)
     for url in FEED_URLS:
         try:
-            items = fetch_feed(url)
-            all_items.extend(items)
+            all_items.extend(fetch_feed(url))
         except Exception as ex:
-            print(f"[WARN] Failed feed {url}: {ex}", file=sys.stderr)
+            print(f"[WARN] RSS failed {url}: {ex}", file=sys.stderr)
 
-    seen = set()
-    unique = []
+    # 2) Fallback to HTML if nothing from RSS
+    if not all_items:
+        for url in HOMEPAGE_URLS:
+            try:
+                all_items.extend(fetch_html(url))
+            except Exception as ex:
+                print(f"[WARN] HTML failed {url}: {ex}", file=sys.stderr)
+
+    # dedupe by URL
+    seen = set(); unique = []
     for it in sorted(all_items, key=lambda x: x["published"], reverse=True):
         key = it["url"] or it["id"]
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(it)
+        if key in seen: continue
+        seen.add(key); unique.append(it)
 
     payload = {
         "source": "FCInterNews (Italian)",
@@ -100,7 +153,6 @@ def main():
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-
     print(f"Wrote {len(unique)} items to {OUTPUT_FILE}")
 
 if __name__ == "__main__":

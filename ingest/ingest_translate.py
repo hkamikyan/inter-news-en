@@ -88,7 +88,6 @@ def collect_article_links(base_url: str, html: str, cap: int, seen: set) -> List
     return out
 
 def extract_meta(article_html: str) -> Tuple[str, str, str]:
-    """Return (title_it, teaser_it, published_iso) using OG tags with fallbacks."""
     soup = BeautifulSoup(article_html, "lxml")
     title = ""
     teaser = ""
@@ -98,9 +97,22 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
     if ogt and ogt.get("content"):
         title = ogt["content"].strip()
 
+    # prefer og:description, else meta[name=description]
     ogd = soup.find("meta", property="og:description")
     if ogd and ogd.get("content"):
         teaser = ogd["content"].strip()
+    else:
+        md = soup.find("meta", attrs={"name": "description"})
+        if md and md.get("content"):
+            teaser = md["content"].strip()
+
+    # try a first paragraph in the main article body
+    if not teaser:
+        main = soup.find("article") or soup.select_one(".article, .post, .entry-content")
+        if main:
+            p = main.find("p")
+            if p:
+                teaser = p.get_text(" ", strip=True)
 
     ogtime = soup.find("meta", property="article:published_time")
     if ogtime and ogtime.get("content"):
@@ -121,6 +133,7 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
         teaser = teaser[:297] + "…"
 
     return title, teaser, published_iso
+
 
 def hashlib_md5(s: str) -> str:
     import hashlib as _h
@@ -197,7 +210,7 @@ def nice_en_title(s: str) -> str:
     return tidy
 
 
-def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: str, source_url: str) -> str:
+def render_post_html(title_en: str, title_it: str, teaser_en: str, teaser_it: str, source_url: str, published_iso: str) -> str:
     # Simple static page. We link back to source for full text (copyright-safe).
     return f"""<!doctype html>
 <html lang="en">
@@ -260,7 +273,9 @@ def main():
             print(f"[WARN] Article fetch failed {href}: {ex}", file=sys.stderr)
             title_it, teaser_it, published = "", "", datetime.now(timezone.utc).isoformat()
 
-        title_en = translate(title_it)
+        title_en_raw = translate(title_it)
+        title_en = nice_en_title(title_en_raw)
+        #title_en = translate(title_it)
         time.sleep(SLEEP_BETWEEN_CALLS)
         teaser_en = translate(teaser_it) if teaser_it else ""
         if teaser_it:
@@ -288,7 +303,7 @@ def main():
     for href in links[MAX_ARTICLE_ENRICH:]:
         slug = urlparse(href).path.rstrip("/").split("/")[-1].replace("-", " ").strip()
         title_it = slug.title() if slug else href
-        title_en = translate(title_it)
+        title_en = nice_en_title(translate(title_it))
         time.sleep(SLEEP_BETWEEN_CALLS)
 
         post_id = hashlib_md5(href)

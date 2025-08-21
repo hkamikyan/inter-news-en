@@ -1,6 +1,6 @@
 name: Fetch & Translate
 
-#on:
+on:
   #schedule:
     #- cron: "*/30 * * * *"  # every 30 minutes
   workflow_dispatch: {}      # lets you run it manually

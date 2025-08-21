@@ -27,9 +27,11 @@ jobs:
       - name: Run ingest
         env:
           LIBRETRANSLATE_URL: "https://libretranslate.com/translate"
-          TRANSLATE_SLEEP: "0.9"  # slower = fewer translator errors
-          MAX_LINKS_FROM_LISTINGS: "60"    # how many links to consider from listings
-          MAX_ARTICLE_ENRICH: "20" #how many article pages to open for OG/meta
+          TRANSLATE_SLEEP: "1.2"
+          MAX_LINKS_FROM_LISTINGS: "50"
+          MAX_ARTICLE_ENRICH: "20"
+          TRANSLATE_CHARS_PER_CHUNK: "420"
+
         run: |
           python ingest/ingest_translate.py
 

@@ -1,15 +1,11 @@
-import os, json, time, hashlib, sys, re
+import os, json, time, hashlib, sys
 from datetime import datetime, timezone
 from typing import List, Dict
-import feedparser
+from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-# --- CONFIG ---
-FEED_URLS = [
-     #"https://www.fcinternews.it/rss/"
-]
-
+# ------------ CONFIG ------------
 HOMEPAGE_URLS: List[str] = [
     "https://www.fcinternews.it/",
     "https://m.fcinternews.it/",
@@ -22,22 +18,53 @@ OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "site", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
 
 LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.com/translate")
-SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "0.8"))
-MAX_ITEMS_PER_FEED = int(os.getenv("MAX_ITEMS_PER_FEED", "50"))
+SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.2"))
 MAX_ITEMS_FROM_HTML = int(os.getenv("MAX_ITEMS_FROM_HTML", "30"))
+TIMEOUT = 30
 
-A_PATTERN = re.compile(r"^https://www\.fcinternews\.it/.+?-\d{5,}$")
+UA_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/1.1; +https://github.com/your/repo)",
+    "Accept-Language": "it,en;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
 
+EXCLUDE_PATH_PARTS = {"tag", "topic", "categoria", "category", "video", "gallery"}
+
+# ------------ HELPERS ------------
 def ensure_dirs():
     os.makedirs(OUTPUT_PATH, exist_ok=True)
 
 def md5(text: str) -> str:
-    return hashlib.md5(text.encode("utf-8")).hexdigest()
+    import hashlib as _h
+    return _h.md5(text.encode("utf-8")).hexdigest()
+
+def http_get(url: str) -> str:
+    r = requests.get(url, headers=UA_HEADERS, timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.text
+
+def is_fcinternews_article(url: str) -> bool:
+    """Allow both absolute and relative urls; ensure domain is fcinternews.it and path isn't a tag/category."""
+    p = urlparse(url)
+    # Allow relative paths (no netloc)
+    if not p.netloc:
+        return True  # we'll join with base later
+    host_ok = p.netloc.endswith("fcinternews.it")
+    if not host_ok:
+        return False
+    parts = [seg for seg in p.path.split("/") if seg]
+    if not parts:
+        return False
+    if any(seg in EXCLUDE_PATH_PARTS for seg in parts):
+        return False
+    # simple heuristic: likely article if path has at least 2 segments or a hyphen
+    return ("-" in p.path) or (len(parts) >= 2)
 
 def translate(text: str, source="it", target="en") -> str:
-    """Try LibreTranslate; on any error, fall back to MyMemory; else return original text."""
+    """Try LibreTranslate; if it fails, try MyMemory; else return original."""
     if not text:
         return ""
+    # 1) LibreTranslate
     try:
         r = requests.post(
             LIBRETRANSLATE_URL,
@@ -50,11 +77,9 @@ def translate(text: str, source="it", target="en") -> str:
                 return data["translatedText"]
             if isinstance(data, list) and data and "translatedText" in data[0]:
                 return data[0]["translatedText"]
-        # If 4xx/5xx or unexpected payload, fall through to MyMemory
     except Exception:
         pass
-
-    # Fallback: MyMemory (free, no key). Rate limits are loose; we only translate titles.
+    # 2) MyMemory fallback
     try:
         mm = requests.get(
             "https://api.mymemory.translated.net/get",
@@ -68,123 +93,98 @@ def translate(text: str, source="it", target="en") -> str:
                 return t
     except Exception:
         pass
-
-    # Last resort: return the original Italian so we still publish something.
+    # 3) Give up—return Italian so we still publish something
     return text
 
+def collect_links_from_listing(base_url: str, html: str) -> List[Dict]:
+    soup = BeautifulSoup(html, "lxml")
+    seen = set()
+    items: List[Dict] = []
 
-def fetch_feed(url: str) -> List[Dict]:
-    feed = feedparser.parse(url)
-    items = []
-    for e in feed.entries[:MAX_ITEMS_PER_FEED]:
-        link = getattr(e, "link", "")
-        title_it = getattr(e, "title", "") or ""
-        summary_it = getattr(e, "summary", "") or getattr(e, "description", "") or ""
-        published = getattr(e, "published", "") or getattr(e, "updated", "")
-        if not published:
-            published = datetime.now(timezone.utc).isoformat()
+    for a in soup.find_all("a", href=True):
+        href_raw = a["href"].strip()
+        if not href_raw:
+            continue
 
-        title_en = translate(title_it); time.sleep(SLEEP_BETWEEN_CALLS)
-        summary_en = translate(summary_it) if summary_it else ""; time.sleep(SLEEP_BETWEEN_CALLS)
+        # Make absolute
+        href = urljoin(base_url, href_raw)
 
-        items.append({
-            "id": md5(link or title_it + published),
-            "feed": url,
-            "url": link,
-            "title_it": title_it,
-            "title_en": title_en,
-            "summary_it": summary_it,
-            "summary_en": summary_en,
-            "published": published,
-        })
+        # Filter to fcinternews and likely article pages
+        if not is_fcinternews_article(href):
+            continue
+        p = urlparse(href)
+        if not p.netloc.endswith("fcinternews.it"):
+            continue
+
+        # Use the anchor text as the title
+        title_it = (a.get_text() or "").strip()
+        if not title_it or len(title_it) < 6:  # skip very short labels
+            continue
+
+        # Dedupe by URL
+        if href in seen:
+            continue
+        seen.add(href)
+
+        items.append({"url": href, "title_it": title_it})
+
+        if len(items) >= MAX_ITEMS_FROM_HTML:
+            break
+
     return items
 
-def fetch_html(url: str) -> List[Dict]:
-    out = []
-    html = requests.get(url, timeout=30).text
-    soup = BeautifulSoup(html, "lxml")
-
-    links = []
-    for a in soup.find_all("a", href=True):
-        href = a["href"].strip()
-        if A_PATTERN.match(href):
-            title = (a.get_text() or "").strip()
-            if title and (href, title) not in links:
-                links.append((href, title))
-
-    for href, title in links[:MAX_ITEMS_FROM_HTML]:
-        teaser = ""
-        a = soup.find("a", href=href)
-        parent = a.parent if a else None
-        if parent:
-            sibling_texts = []
-            for sib in list(parent.next_siblings)[:2] + list(parent.previous_siblings)[:2]:
-                if getattr(sib, "name", "") in ("p", "span", "div"):
-                    txt = (sib.get_text() or "").strip()
-                    if 30 <= len(txt) <= 240:
-                        sibling_texts.append(txt)
-            if sibling_texts:
-                teaser = sibling_texts[0]
-
-        published = datetime.now(timezone.utc).isoformat()
-        title_en = translate(title); time.sleep(SLEEP_BETWEEN_CALLS)
-        teaser_en = translate(teaser) if teaser else ""; time.sleep(SLEEP_BETWEEN_CALLS)
-
-        out.append({
-            "id": md5(href),
-            "feed": url,
-            "url": href,
-            "title_it": title,
-            "title_en": title_en,
-            "summary_it": teaser,
-            "summary_en": teaser_en,
-            "published": published,
-        })
-    return out
-
+# ------------ MAIN ------------
 def main():
     ensure_dirs()
-    all_items = []
+    collected: List[Dict] = []
 
-
-
-    # 0) HTML first
     for url in HOMEPAGE_URLS:
-         all_items.extend(fetch_html(url))
-
-
-    # 1) Try RSS feeds (if any)
-    for url in FEED_URLS:
         try:
-            all_items.extend(fetch_feed(url))
+            html = http_get(url)
         except Exception as ex:
-            print(f"[WARN] RSS failed {url}: {ex}", file=sys.stderr)
+            print(f"[WARN] Listing fetch failed {url}: {ex}", file=sys.stderr)
+            continue
+        links = collect_links_from_listing(url, html)
+        if links:
+            collected.extend(links)
 
-    # 2) Fallback to HTML if nothing from RSS
-    if not all_items:
-        for url in HOMEPAGE_URLS:
-            try:
-                all_items.extend(fetch_html(url))
-            except Exception as ex:
-                print(f"[WARN] HTML failed {url}: {ex}", file=sys.stderr)
+    # Dedupe across pages by URL, keep first occurrence
+    unique_by_url = {}
+    for it in collected:
+        unique_by_url.setdefault(it["url"], it)
+    unique = list(unique_by_url.values())
 
-    # dedupe by URL
-    seen = set(); unique = []
-    for it in sorted(all_items, key=lambda x: x["published"], reverse=True):
-        key = it["url"] or it["id"]
-        if key in seen: continue
-        seen.add(key); unique.append(it)
+    # Translate TITLES ONLY (fast + robust)
+    out_items: List[Dict] = []
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for it in unique:
+        try:
+            title_en = translate(it["title_it"])
+            time.sleep(SLEEP_BETWEEN_CALLS)
+        except Exception:
+            title_en = it["title_it"]
+        out_items.append({
+            "id": md5(it["url"]),
+            "feed": "listing",
+            "url": it["url"],
+            "title_it": it["title_it"],
+            "title_en": title_en,
+            "summary_it": "",
+            "summary_en": "",
+            "published": now_iso,
+        })
 
     payload = {
         "source": "FCInterNews (Italian)",
         "generated_utc": datetime.now(timezone.utc).isoformat(),
-        "count": len(unique),
-        "articles": unique,
+        "count": len(out_items),
+        "articles": out_items,
     }
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"Wrote {len(unique)} items to {OUTPUT_FILE}")
+
+    print(f"[INFO] Wrote {len(out_items)} items to {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()

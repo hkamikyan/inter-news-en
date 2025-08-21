@@ -6,8 +6,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-# Try to import trafilatura for robust article extraction.
-# If unavailable, we'll fall back to BeautifulSoup heuristics.
+# Try to import trafilatura for robust article extraction (optional)
 try:
     import trafilatura  # type: ignore
     HAS_TRAFILATURA = True
@@ -15,7 +14,7 @@ except Exception:
     HAS_TRAFILATURA = False
 
 # ==============================
-# CONFIG (tweak via env if needed)
+# CONFIG
 # ==============================
 LISTING_URLS: List[str] = [
     "https://www.fcinternews.it/",
@@ -26,7 +25,6 @@ LISTING_URLS: List[str] = [
     "https://www.fcinternews.it/focus/",
 ]
 
-# Output lives in /docs so GitHub Pages can serve it
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
 POSTS_DIR   = os.path.join(os.path.dirname(__file__), "..", "docs", "posts")
@@ -35,23 +33,19 @@ LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.com
 SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.0"))
 TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "30"))
 
-# How many links to consider vs. fully enrich (open article page)
 MAX_LINKS_FROM_LISTINGS = int(os.getenv("MAX_LINKS_FROM_LISTINGS", "50"))
-MAX_ARTICLE_ENRICH      = int(os.getenv("MAX_ARTICLE_ENRICH", "25"))  # we'll translate full text for these
-
-# Translation chunk size (avoid API payload limits)
-TRANSLATE_CHARS_PER_CHUNK = int(os.getenv("TRANSLATE_CHARS_PER_CHUNK", "900"))
+MAX_ARTICLE_ENRICH      = int(os.getenv("MAX_ARTICLE_ENRICH", "25"))
+TRANSLATE_CHARS_PER_CHUNK = int(os.getenv("TRANSLATE_CHARS_PER_CHUNK", "420"))  # conservative
 
 UA_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/3.0; +https://github.com/your/repo)",
+    "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/3.1; +https://github.com/your/repo)",
     "Accept-Language": "it,en;q=0.9",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-# -------- URL filters ----------
-ARTICLE_TAIL = re.compile(r"-\d{5,}/?$")  # ends with -<id>
+ARTICLE_TAIL = re.compile(r"-\d{5,}/?$")
 EXCLUDE_FIRST_SEGMENTS = {"web-tv", "sondaggi", "calendario_classifica", "tag", "topic", "categoria", "category", "gallery"}
-ALLOW_FIRST_SEGMENTS   = {"news", "mercato", "in-primo-piano", "focus"}  # common sections
+ALLOW_FIRST_SEGMENTS   = {"news", "mercato", "in-primo-piano", "focus"}
 
 # ==============================
 # HELPERS
@@ -98,7 +92,7 @@ def collect_article_links(base_url: str, html: str, cap: int, seen: set) -> List
     return out
 
 def extract_meta(article_html: str) -> Tuple[str, str, str]:
-    """Return (title_it, teaser_it, published_iso) using OG tags with fallbacks."""
+    """Return (title_it, teaser_it, published_iso) from OG/meta with fallbacks."""
     soup = BeautifulSoup(article_html, "lxml")
     title = ""
     teaser = ""
@@ -108,7 +102,6 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
     if ogt and ogt.get("content"):
         title = ogt["content"].strip()
 
-    # prefer og:description, else meta[name=description], else first paragraph
     ogd = soup.find("meta", property="og:description")
     if ogd and ogd.get("content"):
         teaser = ogd["content"].strip()
@@ -144,14 +137,12 @@ def extract_meta(article_html: str) -> Tuple[str, str, str]:
     return title, teaser, published_iso
 
 def extract_fulltext(article_html: str, url: Optional[str] = None) -> str:
-    """Prefer trafilatura (with URL hints), then scrub boilerplate.
-    Falls back to heuristic extraction + scrub."""
+    """Extract main story; scrub boilerplate, social embeds, tickers."""
     text = ""
 
-    # --- A) Try trafilatura first ---
+    # A) Use trafilatura if available (URL hint helps)
     if HAS_TRAFILATURA:
         try:
-            # Using the URL helps trafilatura apply site-specific rules
             text = trafilatura.extract(
                 article_html,
                 include_comments=False,
@@ -161,10 +152,19 @@ def extract_fulltext(article_html: str, url: Optional[str] = None) -> str:
         except Exception:
             text = ""
 
-    # --- B) Heuristic fallback if needed ---
+    # B) Heuristic fallback
     if not text:
         soup = BeautifulSoup(article_html, "lxml")
-        # Try to aim at the main story container
+
+        # drop obvious non-article blocks
+        for sel in [
+            "script", "style", "nav", "footer", "header", "aside",
+            ".share", ".social", ".related", ".sidebar", ".widget", ".tags",
+            ".gallery", ".video", ".player", ".breadcrumbs", ".author-box"
+        ]:
+            for el in soup.select(sel):
+                el.decompose()
+
         main = (
             soup.find("article")
             or soup.select_one(
@@ -181,32 +181,29 @@ def extract_fulltext(article_html: str, url: Optional[str] = None) -> str:
                     paras.append(t)
         text = "\n\n".join(paras)
 
-    # --- C) Scrub boilerplate common on fcinternews.it ---
     if not text:
         return ""
 
-    # 1) Stop at "Altre notizie" section (sidebar/related list)
+    # C) Scrub boilerplate / tickers / social
     STOP_MARKERS = [
         "Altre notizie", "Altre notizie -", "ALTRE NOTIZIE",
         "Leggi anche", "Potrebbe interessarti", "Articoli correlati"
     ]
     lowered = text.lower()
-    cutoff_idx = len(text)
-    for marker in STOP_MARKERS:
-        i = lowered.find(marker.lower())
+    cutoff = len(text)
+    for m in STOP_MARKERS:
+        i = lowered.find(m.lower())
         if i != -1:
-            cutoff_idx = min(cutoff_idx, i)
-    text = text[:cutoff_idx].strip()
+            cutoff = min(cutoff, i)
+    text = text[:cutoff].strip()
 
-    # 2) Drop lines that look like metadata or tickers
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-
-    META_PREFIXES = (
-        "Sezione:", "Data:", "Autore:", "Twitter:", "Redazione:",
-        "Fonte:", "Foto:", "Credit:", "Credits:", "Copyright"
-    )
-    # e.g., "- 21:45 ..." or "21:45 ..." (ticker rows)
-    TICKER_RE = re.compile(r"^(?:-?\s*)?\d{1,2}:\d{2}\b")
+    META_PREFIXES = ("Sezione:", "Data:", "Autore:", "Twitter:", "Redazione:",
+                     "Fonte:", "Foto:", "Credit:", "Credits:", "Copyright")
+    TICKER_RE = re.compile(r"^(?:-?\s*)?\d{1,2}:\d{2}\b")  # "21:45 ..."
+    URL_RE = re.compile(r"https?://\S+")
+    HANDLE_RE = re.compile(r"(^|[\s(])@[\w_]+")
+    YT_TW_HINTS = ("youtube.com", "youtu.be", "twitter.com", "x.com", "pic.twitter.com")
 
     CLEAN = []
     for ln in lines:
@@ -214,32 +211,29 @@ def extract_fulltext(article_html: str, url: Optional[str] = None) -> str:
             continue
         if TICKER_RE.match(ln):
             continue
-        # Many headlines from sidebars have long hyphen-separated chains:
-        if ln.count(" - ") >= 2 and len(ln) > 120:
+        if any(h in ln for h in YT_TW_HINTS):
             continue
-        # Repeated author line
-        if "Twitter:" in ln or "@" in ln and "Twitter" in ln:
-            continue
-        CLEAN.append(ln)
+        ln = URL_RE.sub("", ln)
+        ln = HANDLE_RE.sub(" ", ln)
+        ln = re.sub(r"\s{2,}", " ", ln)
+        if ln:
+            CLEAN.append(ln)
 
     text = "\n\n".join(CLEAN).strip()
 
-    # 3) If still extremely long and clearly listy, keep first ~1200 chars
-    if len(text) > 8000:
-        text = text[:1200].rsplit("\n\n", 1)[0].strip()
+    if len(text) > 12000:
+        text = text[:4000].rsplit("\n\n", 1)[0].strip()
 
     return text
-
 
 def hashlib_md5(s: str) -> str:
     import hashlib as _h
     return _h.md5(s.encode("utf-8")).hexdigest()
 
 def translate_once(text: str, source="it", target="en") -> str:
-    """Try LibreTranslate; if it fails, try MyMemory; else return original."""
+    """One-shot translate with fail-open fallback."""
     if not text:
         return ""
-    # 1) LibreTranslate
     try:
         r = requests.post(
             LIBRETRANSLATE_URL,
@@ -254,7 +248,6 @@ def translate_once(text: str, source="it", target="en") -> str:
                 return data[0]["translatedText"]
     except Exception:
         pass
-    # 2) MyMemory fallback
     try:
         mm = requests.get(
             "https://api.mymemory.translated.net/get",
@@ -268,41 +261,53 @@ def translate_once(text: str, source="it", target="en") -> str:
                 return t
     except Exception:
         pass
-    # 3) Give up—return original
     return text
 
 def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRANSLATE_CHARS_PER_CHUNK) -> str:
-    """Split long text into chunks to avoid API limits, translate piecewise, then join."""
+    """Translate long text in small chunks; guard against API error echoes."""
     if not long_text:
         return ""
+    max_chars = min(chunk_chars, 420)  # extra safe
+
+    paras = [p.strip() for p in long_text.split("\n\n") if p.strip()]
     chunks = []
-    current = []
-    current_len = 0
-    for para in long_text.split("\n\n"):
-        p = para.strip()
-        if not p:
+    for p in paras:
+        if len(p) <= max_chars:
+            chunks.append(p)
             continue
-        if current_len + len(p) + 2 <= chunk_chars:
-            current.append(p)
-            current_len += len(p) + 2
-        else:
-            chunks.append("\n\n".join(current))
-            current = [p]
-            current_len = len(p)
-    if current:
-        chunks.append("\n\n".join(current))
+        parts = re.split(r"(?<=[\.\?!])\s+", p)
+        buf = ""
+        for part in parts:
+            if len(buf) + len(part) + 1 <= max_chars:
+                buf = f"{buf} {part}".strip() if buf else part
+            else:
+                if buf:
+                    chunks.append(buf)
+                if len(part) > max_chars:
+                    for i in range(0, len(part), max_chars):
+                        chunks.append(part[i:i+max_chars])
+                    buf = ""
+                else:
+                    buf = part
+        if buf:
+            chunks.append(buf)
 
     out_parts = []
     for c in chunks:
-        out_parts.append(translate_once(c, source=source, target=target))
+        t = translate_once(c, source=source, target=target)
+        if not t or "QUERY LENGTH LIMIT EXCEEDED" in t.upper():
+            t = c  # fallback to Italian chunk
+        out_parts.append(t)
         time.sleep(SLEEP_BETWEEN_CALLS)
+
     return "\n\n".join(out_parts)
 
-# Optional: make English titles look nicer
+# Title niceness
 ACRONYMS = {"psg", "uefa", "fifa", "var", "usa", "uk", "napoli", "milan", "roma", "inter"}
 def nice_en_title(s: str) -> str:
     if not s:
         return s
+    s = re.sub(r"^\s*(video|foto)\s*[—-:]\s*", "", s, flags=re.IGNORECASE)  # drop VIDEO/FOTO prefix
     s = re.sub(r"\s+", " ", s).strip()
     words = s.split(" ")
     out = []
@@ -314,15 +319,12 @@ def nice_en_title(s: str) -> str:
             out.append(w[:1].upper() + w[1:])
         else:
             out.append(w[:1].upper() + w[1:] if len(w) > 3 else lw)
-    s2 = " ".join(out).replace(" - ", " — ")
-    return s2
+    return " ".join(out).replace(" - ", " — ")
 
 def html_paragraphs(text: str) -> str:
-    """Turn plain text with blank-line paragraphs into <p> blocks."""
     if not text:
         return ""
-    parts = [f"<p>{x}</p>" for x in text.split("\n\n") if x.strip()]
-    return "\n    ".join(parts)
+    return "\n    ".join(f"<p>{x}</p>" for x in text.split("\n\n") if x.strip())
 
 def render_post_html(
     title_en: str,
@@ -334,7 +336,6 @@ def render_post_html(
     source_url: str,
     published_iso: str
 ) -> str:
-    # Simple static page. We link back to source for full text reference.
     full_en_html = html_paragraphs(full_en) if full_en else ""
     full_it_html = html_paragraphs(full_it) if full_it else ""
 
@@ -384,7 +385,7 @@ def render_post_html(
 def main():
     ensure_dirs()
 
-    # 1) Collect candidate article links from listings
+    # 1) Collect links
     seen_urls = set()
     links: List[str] = []
     per_page_cap = max(10, MAX_LINKS_FROM_LISTINGS // max(1, len(LISTING_URLS)))
@@ -396,12 +397,10 @@ def main():
         except Exception as ex:
             print(f"[WARN] Listing fetch failed {url}: {ex}", file=sys.stderr)
 
-    # Deduplicate and clamp
     links = list(dict.fromkeys(links))[:MAX_LINKS_FROM_LISTINGS]
-
     items: List[Dict] = []
 
-    # 2) Enrich a subset by fetching article pages (OG meta + full text)
+    # 2) Enrich subset: meta + full text + translation
     for href in links[:MAX_ARTICLE_ENRICH]:
         try:
             article_html = http_get(href)
@@ -411,16 +410,12 @@ def main():
             print(f"[WARN] Article fetch failed {href}: {ex}", file=sys.stderr)
             title_it, teaser_it, published, full_it = "", "", datetime.now(timezone.utc).isoformat(), ""
 
-        # translate + tidy
         title_en = nice_en_title(translate_once(title_it))
         time.sleep(SLEEP_BETWEEN_CALLS)
-
         teaser_en = translate_once(teaser_it) if teaser_it else ""
         if teaser_it:
             time.sleep(SLEEP_BETWEEN_CALLS)
-
         full_en = translate_chunked(full_it) if full_it else ""
-        # no extra sleep: translate_chunked already sleeps per chunk
 
         post_id = hashlib_md5(href)
         post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
@@ -430,8 +425,8 @@ def main():
         items.append({
             "id": post_id,
             "feed": "article",
-            "url": href,                           # original (Italian)
-            "local_url": f"posts/{post_id}.html",  # your page
+            "url": href,
+            "local_url": f"posts/{post_id}.html",
             "title_it": title_it,
             "title_en": title_en,
             "summary_it": teaser_it,
@@ -439,7 +434,7 @@ def main():
             "published": published,
         })
 
-    # 3) For remaining links (not enriched), create minimal local pages with just titles
+    # 3) Lightweight pages for the rest
     now_iso = datetime.now(timezone.utc).isoformat()
     for href in links[MAX_ARTICLE_ENRICH:]:
         slug = urlparse(href).path.rstrip("/").split("/")[-1].replace("-", " ").strip()
@@ -447,7 +442,6 @@ def main():
         title_en = nice_en_title(translate_once(title_it))
         time.sleep(SLEEP_BETWEEN_CALLS)
 
-        # No full text for these lightweight pages
         post_id = hashlib_md5(href)
         post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
         with open(post_path, "w", encoding="utf-8") as f:
@@ -465,16 +459,14 @@ def main():
             "published": now_iso,
         })
 
-    # 4) Sort newest first and write payload
+    # 4) Write JSON
     items.sort(key=lambda x: x["published"], reverse=True)
-
     payload = {
         "source": "FCInterNews (Italian)",
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "count": len(items),
         "articles": items,
     }
-
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 

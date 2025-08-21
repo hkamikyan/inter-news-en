@@ -7,7 +7,7 @@ import requests
 # --- CONFIG ---
 FEED_URLS = [
     # Try the main RSS; if it 404s later, we'll add section feeds you find on the site.
-    "https://www.fcinternews.it/rss",
+    "https://www.fcinternews.it/info_rss/",
     # Example: add more once you locate them:
     # "https://www.fcinternews.it/rss/mercato",
     # "https://www.fcinternews.it/rss/news",

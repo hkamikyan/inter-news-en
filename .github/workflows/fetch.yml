@@ -27,7 +27,7 @@ jobs:
       - name: Run ingest
         env:
           LIBRETRANSLATE_URL: "https://libretranslate.com/translate"
-          TRANSLATE_SLEEP: "0.8"
+          TRANSLATE_SLEEP: "1.2"
         run: |
           python ingest/ingest_translate.py
 

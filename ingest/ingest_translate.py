@@ -574,6 +574,21 @@ def render_post_html(
     full_en_html = html_paragraphs(full_en) if full_en else ""
     full_it_html = html_paragraphs(full_it) if full_it else ""
 
+    has_en = bool(full_en_html)
+    has_it = bool(full_it_html)
+
+    # Build the main article block once
+    if has_en:
+        article_block = f"<h3>Article</h3>\n{full_en_html}"
+    elif has_it:
+        article_block = (
+            '<div class="src-note">Auto-translation temporarily unavailable — showing original (Italian) below.</div>\n'
+            "<h3>Articolo (Italiano)</h3>\n"
+            f"{full_it_html}"
+        )
+    else:
+        article_block = ""  # nothing available
+
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -598,8 +613,7 @@ def render_post_html(
 
     {"<p>"+teaser_en+"</p>" if teaser_en else ""}
 
-    {"<h3>Article</h3>" if full_en_html else ""}
-    {full_en_html}
+    {article_block}
 
     <p class="src-note">Source (Italian): <a href="{source_url}" target="_blank" rel="noopener noreferrer">{source_url}</a></p>
     <p><a class="btn" href="{source_url}" target="_blank" rel="noopener noreferrer">Read original on FCInterNews</a></p>
@@ -613,6 +627,7 @@ def render_post_html(
   </main>
 </body>
 </html>"""
+
 
 # ==============================
 # MAIN

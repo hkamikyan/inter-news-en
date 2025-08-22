@@ -106,9 +106,12 @@ def translate_cached(text: str, source="it", target="en") -> str:
     if key in c:
         return c[key]
     out = translate_once(text, source=source, target=target)
-    c[key] = out
-    _save_cache()
+    # Only cache if it looks translated (not basically identical)
+    if out and not _looks_unchanged(text, out):
+        c[key] = out
+        _save_cache()
     return out
+
 
 
 def _lt_post(text: str, source="it", target="en") -> Optional[str]:
@@ -336,10 +339,15 @@ def _looks_unchanged(src: str, out: str) -> bool:
 TOTAL_TRANSLATED_CHARS = 0
 MAX_TRANSLATE_CHARS_BUDGET = int(os.getenv("MAX_TRANSLATE_CHARS_BUDGET", "30000"))
 
+# put this near your other globals
+MYMEMORY_DISABLED = False
+
 def _normalize_for_compare(s: str) -> str:
+    import re
     return re.sub(r"\W+", "", (s or "")).lower()
 
 def _looks_unchanged(src: str, out: str) -> bool:
+    """Heuristic to detect when the 'translation' is basically the original text."""
     if not out:
         return True
     a = _normalize_for_compare(src)
@@ -348,53 +356,88 @@ def _looks_unchanged(src: str, out: str) -> bool:
         return True
     if a == b:
         return True
+    # also treat as unchanged if the starts look the same
     return _normalize_for_compare(src[:24]) == _normalize_for_compare(out[:24])
 
 def translate_once(text: str, source="it", target="en") -> str:
-    """Use cache, then MyMemory, fallback to rotating LT; avoid echoing source."""
-    global TOTAL_TRANSLATED_CHARS
+    """
+    Try MyMemory first (free). If rate-limited (429), disable it for the rest of the run.
+    Then try LibreTranslate, rotating through any endpoints provided.
+    Returns the original text only if both services fail or echo the source.
+    """
+    import os, requests
+
+    global MYMEMORY_DISABLED
+
     if not text:
         return ""
 
-    # Budget guard
-    if TOTAL_TRANSLATED_CHARS >= MAX_TRANSLATE_CHARS_BUDGET:
-        return text
+    # ---------- 1) MyMemory (skip after first 429 this run) ----------
+    if not MYMEMORY_DISABLED:
+        try:
+            mm = requests.get(
+                "https://api.mymemory.translated.net/get",
+                params={
+                    "q": text,
+                    "langpair": f"{source}|{target}",
+                    "mt": 1,
+                    "mtonly": 1,  # hint to prefer MT result
+                },
+                timeout=TIMEOUT,
+            )
+            if mm.status_code == 429:
+                MYMEMORY_DISABLED = True
+                dbg("MyMemory disabled for remainder of run (429).")
+            elif mm.ok:
+                j = mm.json()
+                t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
+                if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper() and not _looks_unchanged(text, t):
+                    return t
+            else:
+                dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
+        except Exception as e:
+            dbg(f"MyMemory error: {e}")
 
-    # Cache first
-    c = _load_cache()
-    key = _cache_key(text, source, target)
-    if key in c:
-        return c[key]
-
-    # MyMemory (machine translation hints)
+    # ---------- 2) LibreTranslate fallback (rotate endpoints) ----------
     try:
-        mm = requests.get(
-            "https://api.mymemory.translated.net/get",
-            params={"q": text, "langpair": f"{source}|{target}", "mt": 1, "mtonly": 1},
-            timeout=TIMEOUT,
-        )
-        if mm.ok:
-            j = mm.json()
-            t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
-            if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper() and not _looks_unchanged(text, t):
-                c[key] = t; _save_cache()
-                TOTAL_TRANSLATED_CHARS += len(text)
-                return t
-        else:
-            dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
+        # Prefer CSV list from env; fallback to single URL var for backward compatibility
+        urls_csv = os.getenv("LIBRETRANSLATE_URLS", "").strip()
+        endpoints = [u.strip() for u in urls_csv.split(",") if u.strip()]
+        if not endpoints:
+            single = os.getenv("LIBRETRANSLATE_URL", "")
+            if single:
+                endpoints = [single]
+
+        if USE_LIBRETRANSLATE and endpoints:
+            import json
+            for url in endpoints:
+                try:
+                    r = requests.post(
+                        url,
+                        data={"q": text, "source": source, "target": target, "format": "text"},
+                        timeout=TIMEOUT,
+                    )
+                    ct = r.headers.get("content-type", "")
+                    if r.ok and "json" in ct.lower():
+                        data = r.json()
+                        if isinstance(data, dict):
+                            t = data.get("translatedText") or ""
+                        elif isinstance(data, list) and data and isinstance(data[0], dict):
+                            t = data[0].get("translatedText") or ""
+                        else:
+                            t = ""
+                        if t and not _looks_unchanged(text, t):
+                            return t
+                    else:
+                        dbg(f"LibreTranslate non-JSON or error from {url}: {r.status_code} {r.text[:120]}")
+                except Exception as e:
+                    dbg(f"LibreTranslate error @ {url}: {e}")
     except Exception as e:
-        dbg(f"MyMemory error: {e}")
+        dbg(f"LT fallback setup error: {e}")
 
-    # LibreTranslate fallback (rotating endpoints)
-    t = _lt_post(text, source=source, target=target)
-    if t and not _looks_unchanged(text, t):
-        c[key] = t; _save_cache()
-        TOTAL_TRANSLATED_CHARS += len(text)
-        return t
-
-    # Give up: keep original (also cache so we don't retry this same chunk)
-    c[key] = text; _save_cache()
+    # ---------- 3) Give up: return original (do NOT cache originals) ----------
     return text
+
 
 def translate_long_text(text: str, source="it", target="en") -> str:
     """Chunk + sub-chunk with caching and budget awareness."""

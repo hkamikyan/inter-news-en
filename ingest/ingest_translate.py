@@ -50,6 +50,11 @@ ALLOW_FIRST_SEGMENTS   = {"news", "mercato", "in-primo-piano", "focus"}
 # ==============================
 # HELPERS
 # ==============================
+
+
+def dbg(msg: str):
+    print(f"[DBG] {msg}", file=sys.stderr)
+
 def ensure_dirs():
     os.makedirs(OUTPUT_PATH, exist_ok=True)
     os.makedirs(POSTS_DIR,   exist_ok=True)

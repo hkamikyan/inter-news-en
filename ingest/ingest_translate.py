@@ -29,7 +29,9 @@ OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
 POSTS_DIR   = os.path.join(os.path.dirname(__file__), "..", "docs", "posts")
 
-LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.com/translate")
+LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.de/translate")
+USE_LIBRETRANSLATE = os.getenv("USE_LIBRETRANSLATE", "1") == "1"
+
 SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.0"))
 TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "30"))
 
@@ -239,29 +241,8 @@ def translate_once(text: str, source="it", target="en") -> str:
     """One-shot translate with verbose fallback; never returns API error strings."""
     if not text:
         return ""
-    # 1) LibreTranslate first
-    try:
-        r = requests.post(
-            LIBRETRANSLATE_URL,
-            data={"q": text, "source": source, "target": target, "format": "text"},
-            timeout=TIMEOUT,
-        )
-        if r.ok:
-            data = r.json()
-            if isinstance(data, dict) and "translatedText" in data:
-                t = data["translatedText"] or ""
-                if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                    return t
-            elif isinstance(data, list) and data and "translatedText" in data[0]:
-                t = data[0]["translatedText"] or ""
-                if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                    return t
-        else:
-            dbg(f"LibreTranslate HTTP {r.status_code}: {r.text[:200]}")
-    except Exception as e:
-        dbg(f"LibreTranslate error: {e}")
 
-    # 2) MyMemory fallback
+    # 1) MyMemory first (free, no key)
     try:
         mm = requests.get(
             "https://api.mymemory.translated.net/get",
@@ -277,6 +258,29 @@ def translate_once(text: str, source="it", target="en") -> str:
             dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
     except Exception as e:
         dbg(f"MyMemory error: {e}")
+
+    # 2) Optional LibreTranslate (only if explicitly enabled + URL present)
+    if USE_LIBRETRANSLATE and LIBRETRANSLATE_URL:
+        try:
+            r = requests.post(
+                LIBRETRANSLATE_URL,
+                data={"q": text, "source": source, "target": target, "format": "text"},
+                timeout=TIMEOUT,
+            )
+            if r.ok:
+                data = r.json()
+                if isinstance(data, dict) and "translatedText" in data:
+                    t = data["translatedText"] or ""
+                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                        return t
+                elif isinstance(data, list) and data and "translatedText" in data[0]:
+                    t = data[0]["translatedText"] or ""
+                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                        return t
+            else:
+                dbg(f"LibreTranslate HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            dbg(f"LibreTranslate error: {e}")
 
     # 3) Fail-open: return original
     return text

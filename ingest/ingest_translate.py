@@ -284,6 +284,30 @@ def translate_once(text: str, source="it", target="en") -> str:
 
     # 3) Fail-open: return original
     return text
+def translate_long_text(text: str, source="it", target="en") -> str:
+    """Translate long text by splitting into smaller chunks to stay under API limits."""
+    MAX_LEN = 450  # stay under MyMemory’s 500-char limit
+    parts = []
+    current = []
+    count = 0
+
+    for para in text.split("\n"):
+        if count + len(para) > MAX_LEN:
+            chunk = "\n".join(current).strip()
+            if chunk:
+                parts.append(translate_once(chunk, source, target))
+            current = [para]
+            count = len(para)
+        else:
+            current.append(para)
+            count += len(para)
+
+    if current:
+        chunk = "\n".join(current).strip()
+        if chunk:
+            parts.append(translate_once(chunk, source, target))
+
+    return "\n\n".join(parts)
 
 
 def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRANSLATE_CHARS_PER_CHUNK) -> str:

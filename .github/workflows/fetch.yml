@@ -26,12 +26,15 @@ jobs:
 
       - name: Run ingest
         env:
+          # Rotate through any working public instances (best effort)
+          LIBRETRANSLATE_URLS: "https://libretranslate.de/translate,https://translate.argosopentech.com/translate"
           USE_LIBRETRANSLATE: "1"
-          LIBRETRANSLATE_URL: "https://libretranslate.de/translate"
-          TRANSLATE_SLEEP: "1.5"
-          MAX_LINKS_FROM_LISTINGS: "20"   # lower while debugging
-          MAX_ARTICLE_ENRICH: "20"         # translate fewer full articles for now
-          TRANSLATE_CHARS_PER_CHUNK: "420"
+          TRANSLATE_SLEEP: "1.7"
+        
+          # Keep the run small while free
+          MAX_ARTICLE_ENRICH: "8"              # translate full body for top N only
+          TRANSLATE_CHARS_PER_CHUNK: "360"     # smaller chunks help success rate
+          MAX_TRANSLATE_CHARS_BUDGET: "25000"  # stop translating after ~25k chars/run
 
 
         run: |

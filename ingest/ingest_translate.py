@@ -237,31 +237,38 @@ def hashlib_md5(s: str) -> str:
     import hashlib as _h
     return _h.md5(s.encode("utf-8")).hexdigest()
 
+def _normalize_for_compare(s: str) -> str:
+    # strip all non-letters/digits, lowercase
+    return re.sub(r"\W+", "", (s or "")).lower()
+
 def _looks_unchanged(src: str, out: str) -> bool:
+    """Heuristic: output still basically Italian (unchanged)."""
     if not out:
         return True
-    a = re.sub(r"\W+", "", (src or "")).lower()
-    b = re.sub(r"\W+", "", (out or "")).lower()
+    a = _normalize_for_compare(src)
+    b = _normalize_for_compare(out)
     if not a or not b:
         return True
-    # identical or very close => treat as untranslated
-    return a == b or (len(a) >= 6 and abs(len(a) - len(b)) <= 1 and (a in b or b in a))
+    # identical or near-identical => unchanged
+    if a == b:
+        return True
+    # if the first 24 chars match tightly, also treat as unchanged
+    return _normalize_for_compare(src[:24]) == _normalize_for_compare(out[:24])
 
 def translate_once(text: str, source="it", target="en") -> str:
     """Try MyMemory (forced MT); if unchanged, try LibreTranslate (if enabled)."""
     if not text:
         return ""
 
-    # --- 1) MyMemory (force MT if available) ---
+    # --- 1) MyMemory (try to force MT) ---
     try:
         mm = requests.get(
             "https://api.mymemory.translated.net/get",
             params={
                 "q": text,
                 "langpair": f"{source}|{target}",
-                # the following hints push it toward MT output; ignored by server if unsupported
-                "mt": 1,
-                "mtonly": 1,
+                "mt": 1,      # hint machine translation
+                "mtonly": 1,  # prefer MT result
             },
             timeout=TIMEOUT,
         )
@@ -298,9 +305,77 @@ def translate_once(text: str, source="it", target="en") -> str:
         except Exception as e:
             dbg(f"LibreTranslate error: {e}")
 
-    # --- 3) Fail-open: return original (unchanged) ---
+    # --- 3) Fail-open: original ---
     return text
 
+def translate_long_text(text: str, source="it", target="en") -> str:
+    """
+    Chunk long text conservatively. If a chunk returns unchanged,
+    retry by splitting into smaller sub-chunks (sentences/commas).
+    """
+    if not text:
+        return ""
+
+    MAX_LEN = 420  # conservative for free MT services
+    paras = [p.strip() for p in text.split("\n\n") if p.strip()]
+
+    def _split_sentences(s: str) -> list[str]:
+        # split on sentence boundaries; if still long, split on commas
+        parts = re.split(r"(?<=[\.\?!])\s+", s)
+        out, buf = [], ""
+        for part in parts:
+            if len((buf + " " + part).strip()) <= MAX_LEN:
+                buf = (buf + " " + part).strip() if buf else part
+            else:
+                if buf:
+                    out.append(buf)
+                if len(part) <= MAX_LEN:
+                    buf = part
+                else:
+                    # force-slice long sentence
+                    for i in range(0, len(part), MAX_LEN):
+                        out.append(part[i:i+MAX_LEN])
+                    buf = ""
+        if buf:
+            out.append(buf)
+
+        # second pass: if any item still unchanged after translation, we may later split by commas
+        return out
+
+    out_paras = []
+    for p in paras:
+        # First, pack paragraph into <= MAX_LEN chunks
+        chunks = []
+        for sentence in _split_sentences(p):
+            if len(sentence) <= MAX_LEN:
+                chunks.append(sentence)
+            else:
+                # extra safety (shouldn't hit)
+                for i in range(0, len(sentence), MAX_LEN):
+                    chunks.append(sentence[i:i+MAX_LEN])
+
+        translated_chunks = []
+        for c in chunks:
+            t = translate_once(c, source=source, target=target)
+            if _looks_unchanged(c, t):
+                # retry: split this chunk by commas/semicolons for extra help
+                tiny_parts = re.split(r"(?<=[,;:])\s+", c)
+                tiny_out = []
+                for tp in tiny_parts:
+                    tt = translate_once(tp, source=source, target=target)
+                    if _looks_unchanged(tp, tt):
+                        # last resort: keep original tiny piece
+                        tiny_out.append(tp)
+                    else:
+                        tiny_out.append(tt)
+                    time.sleep(SLEEP_BETWEEN_CALLS)
+                t = " ".join(tiny_out)
+            translated_chunks.append(t)
+            time.sleep(SLEEP_BETWEEN_CALLS)
+
+        out_paras.append("\n".join(translated_chunks))
+
+    return "\n\n".join(out_paras)
 
 def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRANSLATE_CHARS_PER_CHUNK) -> str:
     """Translate long text in small chunks; guard against API error echoes."""

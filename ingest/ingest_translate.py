@@ -458,36 +458,35 @@ def main():
             article_html = http_get(href)
             title_it, teaser_it, published = extract_meta(article_html)
             full_it = extract_fulltext(article_html, url=href)
-            
+    
             dbg(f"URL: {href}")
             dbg(f"  title_it: {bool(title_it)} teaser_it: {bool(teaser_it)} full_it_len: {len(full_it)}")
-            
+    
+            # --- translate ---
             title_en = nice_en_title(translate_once(title_it))
             time.sleep(SLEEP_BETWEEN_CALLS)
+    
             teaser_en = translate_once(teaser_it) if teaser_it else ""
             if teaser_it:
                 time.sleep(SLEEP_BETWEEN_CALLS)
-            full_en = translate_chunked(full_it) if full_it else ""
-            
+    
+            # Use our new long-text translator for the body
+            full_en = translate_long_text(full_it) if full_it else ""
+    
             dbg(f"  title_en: {bool(title_en)} teaser_en: {bool(teaser_en)} full_en_len: {len(full_en)}")
-
+    
         except Exception as ex:
             print(f"[WARN] Article fetch failed {href}: {ex}", file=sys.stderr)
+            # minimal placeholders if fetch/extract failed
             title_it, teaser_it, published, full_it = "", "", datetime.now(timezone.utc).isoformat(), ""
-
-        title_en = nice_en_title(translate_once(title_it))
-        time.sleep(SLEEP_BETWEEN_CALLS)
-        teaser_en = translate_once(teaser_it) if teaser_it else ""
-        if teaser_it:
-            time.sleep(SLEEP_BETWEEN_CALLS)
-        full_en = translate_chunked(full_it) if full_it else ""
-
+            title_en, teaser_en, full_en = "", "", ""
+    
         post_id = hashlib_md5(href)
         post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
         with open(post_path, "w", encoding="utf-8") as f:
             f.write(render_post_html(title_en, title_it, teaser_en, teaser_it, full_en, full_it, href, published))
         dbg(f"  wrote: {post_path}")
-
+    
         items.append({
             "id": post_id,
             "feed": "article",

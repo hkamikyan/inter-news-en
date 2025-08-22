@@ -28,9 +28,10 @@ jobs:
         env:
           LIBRETRANSLATE_URL: "https://libretranslate.com/translate"
           TRANSLATE_SLEEP: "1.2"
-          MAX_LINKS_FROM_LISTINGS: "50"
-          MAX_ARTICLE_ENRICH: "20"
+          MAX_LINKS_FROM_LISTINGS: "20"   # lower while debugging
+          MAX_ARTICLE_ENRICH: "6"         # translate fewer full articles for now
           TRANSLATE_CHARS_PER_CHUNK: "420"
+
 
         run: |
           python ingest/ingest_translate.py
@@ -40,7 +41,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/data/articles.json
-          git add docs/posts || true
+          git add -A docs/posts || true
           if ! git diff --cached --quiet; then
             git commit -m "Update translated feed ($(date -u +'%Y-%m-%d %H:%M:%S UTC'))"
             git push

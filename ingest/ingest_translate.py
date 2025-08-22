@@ -29,8 +29,12 @@ OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_PATH, "articles.json")
 POSTS_DIR   = os.path.join(os.path.dirname(__file__), "..", "docs", "posts")
 
-LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.de/translate")
+#LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.de/translate")
+#USE_LIBRETRANSLATE = os.getenv("USE_LIBRETRANSLATE", "1") == "1"
+
+LIBRETRANSLATE_URLS = [u.strip() for u in os.getenv("LIBRETRANSLATE_URLS", "").split(",") if u.strip()]
 USE_LIBRETRANSLATE = os.getenv("USE_LIBRETRANSLATE", "1") == "1"
+
 
 SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.0"))
 TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "30"))
@@ -65,6 +69,80 @@ def http_get(url: str) -> str:
     r = requests.get(url, headers=UA_HEADERS, timeout=TIMEOUT)
     r.raise_for_status()
     return r.text
+
+CACHE_PATH = os.path.join(os.path.dirname(__file__), ".trans_cache.json")
+_translate_cache = None
+
+def _load_cache():
+    global _translate_cache
+    if _translate_cache is not None:
+        return _translate_cache
+    try:
+        with open(CACHE_PATH, "r", encoding="utf-8") as f:
+            _translate_cache = json.load(f)
+    except Exception:
+        _translate_cache = {}
+    return _translate_cache
+
+def _save_cache():
+    try:
+        if _translate_cache is not None:
+            with open(CACHE_PATH, "w", encoding="utf-8") as f:
+                json.dump(_translate_cache, f, ensure_ascii=False)
+    except Exception as e:
+        dbg(f"[cache] save error: {e}")
+
+def _cache_key(text: str, src: str, tgt: str) -> str:
+    import hashlib
+    h = hashlib.sha1()
+    h.update((src+"|"+tgt+"|"+text).encode("utf-8"))
+    return h.hexdigest()
+
+def translate_cached(text: str, source="it", target="en") -> str:
+    if not text:
+        return ""
+    c = _load_cache()
+    key = _cache_key(text, source, target)
+    if key in c:
+        return c[key]
+    out = translate_once(text, source=source, target=target)
+    c[key] = out
+    _save_cache()
+    return out
+
+
+def _lt_post(text: str, source="it", target="en") -> Optional[str]:
+    """Try each LT endpoint; return translated text or None."""
+    if not (USE_LIBRETRANSLATE and LIBRETRANSLATE_URLS):
+        return None
+    for url in LIBRETRANSLATE_URLS:
+        try:
+            r = requests.post(
+                url,
+                data={"q": text, "source": source, "target": target, "format": "text"},
+                timeout=TIMEOUT,
+            )
+            # Some instances send text/plain or HTML on throttle; guard parse
+            ct = r.headers.get("content-type", "")
+            if r.ok and "json" in ct.lower():
+                data = r.json()
+                if isinstance(data, dict):
+                    t = data.get("translatedText") or ""
+                elif isinstance(data, list) and data and isinstance(data[0], dict):
+                    t = data[0].get("translatedText") or ""
+                else:
+                    t = ""
+                if t:
+                    return t
+            else:
+                # Not JSON; log snippet and try next endpoint
+                dbg(f"LibreTranslate non-JSON or error from {url}: {r.status_code} {r.text[:120]}")
+        except Exception as e:
+            dbg(f"LibreTranslate error @ {url}: {e}")
+    return None
+
+
+
 
 def is_article_url(resolved_url: str) -> bool:
     p = urlparse(resolved_url)
@@ -255,124 +333,119 @@ def _looks_unchanged(src: str, out: str) -> bool:
     # if the first 24 chars match tightly, also treat as unchanged
     return _normalize_for_compare(src[:24]) == _normalize_for_compare(out[:24])
 
+TOTAL_TRANSLATED_CHARS = 0
+MAX_TRANSLATE_CHARS_BUDGET = int(os.getenv("MAX_TRANSLATE_CHARS_BUDGET", "30000"))
+
+def _normalize_for_compare(s: str) -> str:
+    return re.sub(r"\W+", "", (s or "")).lower()
+
+def _looks_unchanged(src: str, out: str) -> bool:
+    if not out:
+        return True
+    a = _normalize_for_compare(src)
+    b = _normalize_for_compare(out)
+    if not a or not b:
+        return True
+    if a == b:
+        return True
+    return _normalize_for_compare(src[:24]) == _normalize_for_compare(out[:24])
+
 def translate_once(text: str, source="it", target="en") -> str:
-    """Try MyMemory (forced MT); if unchanged, try LibreTranslate (if enabled)."""
+    """Use cache, then MyMemory, fallback to rotating LT; avoid echoing source."""
+    global TOTAL_TRANSLATED_CHARS
     if not text:
         return ""
 
-    # --- 1) MyMemory (try to force MT) ---
+    # Budget guard
+    if TOTAL_TRANSLATED_CHARS >= MAX_TRANSLATE_CHARS_BUDGET:
+        return text
+
+    # Cache first
+    c = _load_cache()
+    key = _cache_key(text, source, target)
+    if key in c:
+        return c[key]
+
+    # MyMemory (machine translation hints)
     try:
         mm = requests.get(
             "https://api.mymemory.translated.net/get",
-            params={
-                "q": text,
-                "langpair": f"{source}|{target}",
-                "mt": 1,      # hint machine translation
-                "mtonly": 1,  # prefer MT result
-            },
+            params={"q": text, "langpair": f"{source}|{target}", "mt": 1, "mtonly": 1},
             timeout=TIMEOUT,
         )
         if mm.ok:
             j = mm.json()
             t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
             if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper() and not _looks_unchanged(text, t):
+                c[key] = t; _save_cache()
+                TOTAL_TRANSLATED_CHARS += len(text)
                 return t
         else:
             dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
     except Exception as e:
         dbg(f"MyMemory error: {e}")
 
-    # --- 2) LibreTranslate fallback (only if enabled & URL set) ---
-    if USE_LIBRETRANSLATE and LIBRETRANSLATE_URL:
-        try:
-            r = requests.post(
-                LIBRETRANSLATE_URL,
-                data={"q": text, "source": source, "target": target, "format": "text"},
-                timeout=TIMEOUT,
-            )
-            if r.ok:
-                data = r.json()
-                if isinstance(data, dict) and "translatedText" in data:
-                    t = data["translatedText"] or ""
-                elif isinstance(data, list) and data and "translatedText" in data[0]:
-                    t = data[0]["translatedText"] or ""
-                else:
-                    t = ""
-                if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper() and not _looks_unchanged(text, t):
-                    return t
-            else:
-                dbg(f"LibreTranslate HTTP {r.status_code}: {r.text[:200]}")
-        except Exception as e:
-            dbg(f"LibreTranslate error: {e}")
+    # LibreTranslate fallback (rotating endpoints)
+    t = _lt_post(text, source=source, target=target)
+    if t and not _looks_unchanged(text, t):
+        c[key] = t; _save_cache()
+        TOTAL_TRANSLATED_CHARS += len(text)
+        return t
 
-    # --- 3) Fail-open: original ---
+    # Give up: keep original (also cache so we don't retry this same chunk)
+    c[key] = text; _save_cache()
     return text
 
 def translate_long_text(text: str, source="it", target="en") -> str:
-    """
-    Chunk long text conservatively. If a chunk returns unchanged,
-    retry by splitting into smaller sub-chunks (sentences/commas).
-    """
+    """Chunk + sub-chunk with caching and budget awareness."""
     if not text:
         return ""
 
-    MAX_LEN = 420  # conservative for free MT services
+    max_chars = min(TRANSLATE_CHARS_PER_CHUNK, 360)
     paras = [p.strip() for p in text.split("\n\n") if p.strip()]
+    out_paras = []
 
-    def _split_sentences(s: str) -> list[str]:
-        # split on sentence boundaries; if still long, split on commas
+    def split_sentences(s: str) -> list[str]:
         parts = re.split(r"(?<=[\.\?!])\s+", s)
         out, buf = [], ""
         for part in parts:
-            if len((buf + " " + part).strip()) <= MAX_LEN:
+            if len((buf + " " + part).strip()) <= max_chars:
                 buf = (buf + " " + part).strip() if buf else part
             else:
                 if buf:
                     out.append(buf)
-                if len(part) <= MAX_LEN:
+                if len(part) <= max_chars:
                     buf = part
                 else:
-                    # force-slice long sentence
-                    for i in range(0, len(part), MAX_LEN):
-                        out.append(part[i:i+MAX_LEN])
+                    for i in range(0, len(part), max_chars):
+                        out.append(part[i:i+max_chars])
                     buf = ""
         if buf:
             out.append(buf)
-
-        # second pass: if any item still unchanged after translation, we may later split by commas
         return out
 
-    out_paras = []
     for p in paras:
-        # First, pack paragraph into <= MAX_LEN chunks
         chunks = []
-        for sentence in _split_sentences(p):
-            if len(sentence) <= MAX_LEN:
-                chunks.append(sentence)
+        for s in split_sentences(p):
+            if len(s) <= max_chars:
+                chunks.append(s)
             else:
-                # extra safety (shouldn't hit)
-                for i in range(0, len(sentence), MAX_LEN):
-                    chunks.append(sentence[i:i+MAX_LEN])
+                for i in range(0, len(s), max_chars):
+                    chunks.append(s[i:i+max_chars])
 
         translated_chunks = []
-        for c in chunks:
-            t = translate_once(c, source=source, target=target)
-            if _looks_unchanged(c, t):
-                # retry: split this chunk by commas/semicolons for extra help
-                tiny_parts = re.split(r"(?<=[,;:])\s+", c)
+        for ctext in chunks:
+            t = translate_cached(ctext, source=source, target=target)
+            if _looks_unchanged(ctext, t):
+                tiny_parts = re.split(r"(?<=[,;:])\s+", ctext)
                 tiny_out = []
                 for tp in tiny_parts:
-                    tt = translate_once(tp, source=source, target=target)
-                    if _looks_unchanged(tp, tt):
-                        # last resort: keep original tiny piece
-                        tiny_out.append(tp)
-                    else:
-                        tiny_out.append(tt)
+                    tt = translate_cached(tp, source=source, target=target)
+                    tiny_out.append(tt if not _looks_unchanged(tp, tt) else tp)
                     time.sleep(SLEEP_BETWEEN_CALLS)
                 t = " ".join(tiny_out)
             translated_chunks.append(t)
             time.sleep(SLEEP_BETWEEN_CALLS)
-
         out_paras.append("\n".join(translated_chunks))
 
     return "\n\n".join(out_paras)

@@ -236,9 +236,10 @@ def hashlib_md5(s: str) -> str:
     return _h.md5(s.encode("utf-8")).hexdigest()
 
 def translate_once(text: str, source="it", target="en") -> str:
-    """One-shot translate with fail-open fallback."""
+    """One-shot translate with verbose fallback; never returns API error strings."""
     if not text:
         return ""
+    # 1) LibreTranslate first
     try:
         r = requests.post(
             LIBRETRANSLATE_URL,
@@ -248,11 +249,19 @@ def translate_once(text: str, source="it", target="en") -> str:
         if r.ok:
             data = r.json()
             if isinstance(data, dict) and "translatedText" in data:
-                return data["translatedText"]
-            if isinstance(data, list) and data and "translatedText" in data[0]:
-                return data[0]["translatedText"]
-    except Exception:
-        pass
+                t = data["translatedText"] or ""
+                if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                    return t
+            elif isinstance(data, list) and data and "translatedText" in data[0]:
+                t = data[0]["translatedText"] or ""
+                if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                    return t
+        else:
+            dbg(f"LibreTranslate HTTP {r.status_code}: {r.text[:200]}")
+    except Exception as e:
+        dbg(f"LibreTranslate error: {e}")
+
+    # 2) MyMemory fallback
     try:
         mm = requests.get(
             "https://api.mymemory.translated.net/get",
@@ -261,12 +270,17 @@ def translate_once(text: str, source="it", target="en") -> str:
         )
         if mm.ok:
             j = mm.json()
-            t = j.get("responseData", {}).get("translatedText")
-            if t:
+            t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
+            if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
                 return t
-    except Exception:
-        pass
+        else:
+            dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
+    except Exception as e:
+        dbg(f"MyMemory error: {e}")
+
+    # 3) Fail-open: return original
     return text
+
 
 def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRANSLATE_CHARS_PER_CHUNK) -> str:
     """Translate long text in small chunks; guard against API error echoes."""

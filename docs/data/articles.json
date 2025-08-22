@@ -1,8 +1,19 @@
 {
   "source": "FCInterNews (Italian)",
-  "generated_utc": "2025-08-22T22:40:55.964664+00:00",
+  "generated_utc": "2025-08-22T23:39:52.715375+00:00",
   "count": 50,
   "articles": [
+    {
+      "id": "e6438b5783126d9c6be8ee30a750b070",
+      "feed": "listing",
+      "url": "https://www.fcinternews.it/news/mondiali-2026-sorteggio-a-washington-il-prossimo-5-dicembre-arrivato-l-annuncio-di-trump-e-infantino-989714",
+      "local_url": "posts/e6438b5783126d9c6be8ee30a750b070.html",
+      "title_it": "mondiali 2026 sorteggio a washington il prossimo 5 dicembre arrivato l annuncio di trump e infantino 989714",
+      "title_en": "Mondiali 2026 Sorteggio a Washington il Prossimo 5 Dicembre Arrivato l Annuncio di Trump e Infantino 989714",
+      "summary_it": "",
+      "summary_en": "",
+      "published": "2025-08-22T23:38:26.043839+00:00"
+    },
     {
       "id": "c022cb7686d3f76fa3a2de587295af51",
       "feed": "listing",
@@ -12,18 +23,7 @@
       "title_en": "Diouf e gia Nerazzurro ma non Dimentica il Lens Grazie di Tutto 989729",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
-    },
-    {
-      "id": "8225127b31b9cee1fe831ee24bc55c24",
-      "feed": "listing",
-      "url": "https://www.fcinternews.it/il-resto-della-a/de-laurentiis-rilancia-la-serie-a-dovrebbe-tornare-a-16-squadre-e-le-partite-andrebbero-trasmesse-in-chiaro-989700",
-      "local_url": "posts/8225127b31b9cee1fe831ee24bc55c24.html",
-      "title_it": "de laurentiis rilancia la serie a dovrebbe tornare a 16 squadre e le partite andrebbero trasmesse in chiaro 989700",
-      "title_en": "De Laurentiis Rilancia la Serie a Dovrebbe Tornare a 16 Squadre e le Partite Andrebbero Trasmesse in Chiaro 989700",
-      "summary_it": "",
-      "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "253b6d93e7ddb305c64e651208d416b5",
@@ -34,7 +34,7 @@
       "title_en": "Le Prime Parole Nerazzurre di Diouf ho Detto Subito si Essere Interista Significa Molto Fiero di Essere qui 989724",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "ec616e54c1e829924b9beeb5b8bd8aad",
@@ -45,7 +45,7 @@
       "title_en": "Il Cesena Rimonta tre Volte e Ferma l INTER al Debutto in Casa 3 3 al Konami Centre Occasione Sprecata 989708",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "a08a80619bd2145d6b73e596147f8509",
@@ -56,7 +56,7 @@
       "title_en": "Chivu a i Dazn i il Mercato e Aperto Sappiamo che Giocatori Aggiungere non Vogliamo Quantita ma Qualita 989713",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "0a87350948bde7e4c3dfac7d5ccac5d6",
@@ -67,7 +67,7 @@
       "title_en": "Diouf Risponde Alle Curiosita Social Nerazzurre dal Soprannome Alla Prima Maglia da Calcio 989727",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "5b8a8ffd0a22528d4419b549415b3aa4",
@@ -78,7 +78,18 @@
       "title_en": "Arriva la Conferma sul Numero di Maglia di Diouf all INTER si Suona la Traccia 17 a Centrocampo 989725",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
+    },
+    {
+      "id": "865e6bc8dab718248b616bff14eb0877",
+      "feed": "listing",
+      "url": "https://m.fcinternews.it/news/lotta-scudetto-bonanni-napoli-in-prima-linea-insieme-all-inter-curioso-dei-nerazzurri-989716",
+      "local_url": "posts/865e6bc8dab718248b616bff14eb0877.html",
+      "title_it": "lotta scudetto bonanni napoli in prima linea insieme all inter curioso dei nerazzurri 989716",
+      "title_en": "Lotta Scudetto Bonanni NAPOLI in Prima Linea Insieme all INTER Curioso dei Nerazzurri 989716",
+      "summary_it": "",
+      "summary_en": "",
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "8f5df851399382f991f27c867dfa1519",
@@ -89,7 +100,7 @@
       "title_en": "Donnarumma Saluta Commosso i Tifosi del PSG il City nel suo Destino 989728",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "fd4bb36169ff01d0619a72c0a493b144",
@@ -100,7 +111,7 @@
       "title_en": "Martedi la Supercoppa Primavera tra INTER e Cagliari Ingresso Gratuito all Arena Civica di Milano 989680",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "4a9676400e69ed0cc6bef15ca38ee400",
@@ -111,7 +122,7 @@
       "title_en": "Mondiali 2026 Sorteggio a Washington il Prossimo 5 Dicembre Arrivato l Annuncio di Trump e Infantino 989714",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "7b7bd4fd03a5c6eb712db01c09296a0b",
@@ -122,18 +133,7 @@
       "title_en": "Diouf e gia Nerazzurro ma non Dimentica il Lens Grazie di Tutto 989729",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
-    },
-    {
-      "id": "200833a26c1a11440d1712596e5e540b",
-      "feed": "listing",
-      "url": "https://m.fcinternews.it/il-resto-della-a/de-laurentiis-rilancia-la-serie-a-dovrebbe-tornare-a-16-squadre-e-le-partite-andrebbero-trasmesse-in-chiaro-989700",
-      "local_url": "posts/200833a26c1a11440d1712596e5e540b.html",
-      "title_it": "de laurentiis rilancia la serie a dovrebbe tornare a 16 squadre e le partite andrebbero trasmesse in chiaro 989700",
-      "title_en": "De Laurentiis Rilancia la Serie a Dovrebbe Tornare a 16 Squadre e le Partite Andrebbero Trasmesse in Chiaro 989700",
-      "summary_it": "",
-      "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "ca36e8d75e4200edf744c03bddd096d2",
@@ -144,7 +144,7 @@
       "title_en": "Nuovo Ruolo per de Marco Spiegazione VAR e Regole per il Portiere Tempo Effettivo non Nego che 989665",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "e4393df00f7faa10b6b6533de8aa8b61",
@@ -155,7 +155,7 @@
       "title_en": "Gobbi Promuove Diouf ha le Caratteristiche che in Questo Momento Mancano all INTER 989644",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "c84ef461e8a653f87ec71d72a348f302",
@@ -166,7 +166,7 @@
       "title_en": "Galeone Dopo Fabregas Chivu e l Allenatore che mi e Piaciuto di piu Scudetto NAPOLI e INTER Davanti Alle Altre 989710",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "d352830d2826e34dd060477032e94932",
@@ -177,7 +177,7 @@
       "title_en": "I la Repubblica i Disabili a san Siro Nuova Polemica il Parcheggio Diventa a Pagamento 989666",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "a50619f4aa8bb5506e65f8d101c6efca",
@@ -188,7 +188,7 @@
       "title_en": "I Bookies i INTER Torino il Segno 1 in Lavagna a 1 42 Lautaro in Pole sui Marcatori 989696",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "758aecbd5b06fec22175b546f2ad0a7f",
@@ -199,7 +199,7 @@
       "title_en": "Colombo Derby di Milano l ho Preparato Cosi i Giocatori mi Chiedevano se 989669",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "c4e8ac485ecdb78236222f74e06381a0",
@@ -210,7 +210,7 @@
       "title_en": "Liverpool Slot Contento di Leoni se Abbiamo Pagato Tanto per Comprarlo un Motivo c e 989709",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "2d7cf7f31456c2233cf8315fc828b00d",
@@ -221,7 +221,7 @@
       "title_en": "Nasce il Fantacalcio di Fcinternews Ricchi Premi in Palio Come Partecipare 986896",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "4fce94a0cce361773f72d5ebbeb2f3d9",
@@ -232,7 +232,7 @@
       "title_en": "Lautaro all Ottavo Compleanno Nell INTER il Club Ecco Perche ci ha Conquistato 989674",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "c242157177b0e546f7a873f4b18ced1c",
@@ -243,7 +243,7 @@
       "title_en": "NAPOLI i Ricordi di Beukema Bellissima la Vittoria con l INTER Bello Aiutare il NAPOLI 989706",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "2c67d6d6ba29c76c7704d90900a2ed72",
@@ -254,7 +254,7 @@
       "title_en": "Como Caccia al Portiere in Calo le Quotazioni di Stankovic il Serbo Vorrebbe Giocare Titolare 989726",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "2754b677afa85dcc7dbe411f5e89e36e",
@@ -265,7 +265,7 @@
       "title_en": "Il Villarreal ad un Passo da Renato Veiga il Club Iberico si Avvicina Alle Richieste del Chelsea 989548",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "bfd483a98f1d5d507cd0d06a22e8ae2d",
@@ -276,7 +276,7 @@
       "title_en": "Fontanarosa la Nota Dell Avellino il Difensore ha Firmato un Contratto Triennale coi Biancoverdi 989525",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "6bf519124aee2ec07b2e4cde61b7f546",
@@ -287,7 +287,7 @@
       "title_en": "Il Como Cerca un Portiere Fabregas Vorrebbe Inaki Pena ma Nella Lista c e Anche Filip Stankovic 989522",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "05ccd1b03aacd34265bf6dc00aad10e4",
@@ -298,7 +298,7 @@
       "title_en": "I From UK i l INTER ci Prova per Guehi Sondato il Terreno per Prenderlo a Zero in Estate 989490",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "b43476fd12ce1044bbe76474a1b54d3d",
@@ -309,7 +309,7 @@
       "title_en": "I rmc Sport i non si Svende Adrien Rabiot l Olympique Marsiglia Chiede Circa 15 Milioni 989480",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "591b11219e4c646c1ee46bcda90cb3a5",
@@ -320,7 +320,7 @@
       "title_en": "Palacios il Rayo Vallecano Mette la Freccia Accordo con l INTER Superato l Olympiacos 989478",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "69c816e435cba12734510319030c18c4",
@@ -331,7 +331,7 @@
       "title_en": "I si i Capitolo Asllani la Strada tra INTER e Bologna e Tracciata si Cerca la Quadra Definitiva 989418",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "f084f01bba8af7baf90fc580fb0cf427",
@@ -342,7 +342,7 @@
       "title_en": "I si i Lookman Atteso a Zingonia Nella Giornata di Mercoledi Quale Futuro per il Nigeriano 989417",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "6fac3c5f065930deb9c61743d00b9e33",
@@ -353,7 +353,7 @@
       "title_en": "Che ne Sara di Lookman Romano Qualche Club Della Premier League sta Iniziando a Chiamare 989413",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "0e2dcd0841ad129d0bcfe268726614c2",
@@ -364,7 +364,7 @@
       "title_en": "Video Diouf la Prima Giornata Interista Prosegue il Francese al Coni per l Idoneita Sportiva poi la Firma 989701",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "b48e542461ee51cfc2a547ed9feb9329",
@@ -375,7 +375,7 @@
       "title_en": "Sommer Scudetto Faremo di Tutto per Vincerlo Chivu ha Idee Nuove in Questi Mesi con lui ho Capito una Cosa 989687",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "ae31db533d8fadbb3579428ce2a23aea",
@@ -386,7 +386,7 @@
       "title_en": "Diouf all INTER Sage Allenatore del Lens Volevamo Tenerlo ma l Offerta non Poteva Essere Rifiutata 989681",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "e17551318bf8f3c7971b0adf05c726a9",
@@ -397,7 +397,7 @@
       "title_en": "Dumfries Addio all INTER il mio Pensiero Uguale a Quello del Club Scudetto noi Favoriti Dimostriamolo 989676",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "957b54446e31acd2ea9c87347dce091d",
@@ -408,7 +408,7 @@
       "title_en": "Video Andy Diouf e Sbarcato all Aeroporto di Linate ora le Visite Mediche e l Idoneita al Coni 989672",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "64551a6177c87fb356598ff90fd757f1",
@@ -419,7 +419,7 @@
       "title_en": "I gds i Chivu Sorride Ecco Diouf gia in Panchina col Torino Mediana Affollata Frattesi e Zielinski 989649",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "4b521f409329a6d5552127c880767391",
@@ -430,7 +430,7 @@
       "title_en": "I sky i c era Anche il NAPOLI su Diouf poi lo Stop di Lukaku Sorpasso INTER in Poche ore 989645",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "9655dcbb8af4ac3f438ed50c113ea8ad",
@@ -441,7 +441,7 @@
       "title_en": "I sky i INTER il Mercato in Entrata non si Ferma a Diouf a Milano Arrivera Pure un Difensore Anche Senza Cessioni 989635",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "78d57cba689fce155d69231ded2e6c10",
@@ -452,7 +452,7 @@
       "title_en": "I sky i Andy Diouf Pronto a Sposare l INTER il Francese e Atteso Domani a Milano per le Visite Mediche e la Firma 989628",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "8ddd3b99f46f64e832411f121691d3fb",
@@ -463,18 +463,7 @@
       "title_en": "Bastoni Quando Perdi ci Sono due Strade i Nuovi Hanno Qualita Chivu Grande Sorpresa sul Piano Umano 989624",
       "summary_it": "",
       "summary_en": "",
-      "published": "2025-08-22T22:39:06.908328+00:00"
-    },
-    {
-      "id": "e6438b5783126d9c6be8ee30a750b070",
-      "feed": "article",
-      "url": "https://www.fcinternews.it/news/mondiali-2026-sorteggio-a-washington-il-prossimo-5-dicembre-arrivato-l-annuncio-di-trump-e-infantino-989714",
-      "local_url": "posts/e6438b5783126d9c6be8ee30a750b070.html",
-      "title_it": "Mondiali 2026, sorteggio a Washington il prossimo 5 dicembre: arrivato l'annuncio di Trump e Infantino",
-      "title_en": "Mondiali 2026, Sorteggio a Washington il Prossimo 5 Dicembre: Arrivato L'annuncio di Trump e Infantino",
-      "summary_it": "Venerd&igrave; 5 dicembre, a Washington, alle 18 ora italiana, si terr&agrave; il sorteggio della fase finale dei Mondiali 2026 in programma nel Nord America. Come annunciato dal Presidente degli...",
-      "summary_en": "Venerd&igrave; 5 dicembre, a Washington, alle 18 ora italiana, si terr&agrave; il sorteggio della fase finale dei Mondiali 2026 in programma nel Nord America. Come annunciato dal Presidente degli...",
-      "published": "2025-08-22T22:37:46.247719+00:00"
+      "published": "2025-08-22T23:38:26.043839+00:00"
     },
     {
       "id": "e8fe8ae57db13073a573b26c8a8a4bb4",
@@ -485,7 +474,7 @@
       "title_en": "Martedì la Supercoppa Primavera tra INTER e Cagliari: Ingresso Gratuito All'Arena Civica di Milano",
       "summary_it": "Sar&agrave; la storica cornice&nbsp;dell&#39;Arena Civica Gianni Brera&nbsp;di Milano a ospitare la Supercoppa italiana Primavera tra Inter e Cagliari, in programma marted&igrave; 26 agosto 2025, con...",
       "summary_en": "Sar&agrave; la storica cornice&nbsp;dell&#39;Arena Civica Gianni Brera&nbsp;di Milano a ospitare la Supercoppa italiana Primavera tra Inter e Cagliari, in programma marted&igrave; 26 agosto 2025, con...",
-      "published": "2025-08-22T22:37:21.981513+00:00"
+      "published": "2025-08-22T23:38:07.179170+00:00"
     },
     {
       "id": "d0c78fb62ffef6a01f0bc358f3797ad2",
@@ -496,7 +485,18 @@
       "title_en": "Donnarumma Saluta Commosso i Tifosi del PSG. il City nel suo Destino?",
       "summary_it": "Un saluto commovente, quello tra Gianluigi Donnarumma e i tifosi del PSG. Il capitano della nazionale azzurra si &egrave; presentato questa sera in tenuta borghese, al termine della partita dei...",
       "summary_en": "Un saluto commovente, quello tra Gianluigi Donnarumma e i tifosi del PSG. Il capitano della nazionale azzurra si &egrave; presentato questa sera in tenuta borghese, al termine della partita dei...",
-      "published": "2025-08-22T22:36:53.292840+00:00"
+      "published": "2025-08-22T23:37:43.774235+00:00"
+    },
+    {
+      "id": "d7d57f5b9373d814e89ff3164060a679",
+      "feed": "article",
+      "url": "https://www.fcinternews.it/news/lotta-scudetto-bonanni-napoli-in-prima-linea-insieme-all-inter-curioso-dei-nerazzurri-989716",
+      "local_url": "posts/d7d57f5b9373d814e89ff3164060a679.html",
+      "title_it": "Lotta Scudetto, Bonanni: \"Napoli in prima linea insieme all'Inter, curioso dei nerazzurri\"",
+      "title_en": "Lotta Scudetto, Bonanni: \"Napoli in Prima Linea Insieme All'Inter, Curioso dei Nerazzurri\"",
+      "summary_it": "Massimo Bonanni, interpellato da TMW Radio, ha parlato cos&igrave; delle prospettive tricolori, soffermandosi anzitutto su una valutazione personale: &ldquo;Penso che il Napoli possa partire in prima...",
+      "summary_en": "Massimo Bonanni, interpellato da TMW Radio, ha parlato cos&igrave; delle prospettive tricolori, soffermandosi anzitutto su una valutazione personale: &ldquo;Penso che il Napoli possa partire in prima...",
+      "published": "2025-08-22T23:36:59.175950+00:00"
     },
     {
       "id": "6d85b1be3623467888b043dfe00398b3",
@@ -507,7 +507,7 @@
       "title_en": "Arriva la Conferma sul Numero di Maglia di Diouf All'Inter: \"si Suona la Traccia 17 a Centrocampo\"",
       "summary_it": "Dopo le indiscrezioni delle ultime ore, attraverso un messaggio sui social l&#39;Inter conferma il numero di maglia che Andy Diouf porter&agrave; nella sua esperienza all&#39;Inter. Il francese ha...",
       "summary_en": "Dopo le indiscrezioni delle ultime ore, attraverso un messaggio sui social l&#39;Inter conferma il numero di maglia che Andy Diouf porter&agrave; nella sua esperienza all&#39;Inter. Il francese ha...",
-      "published": "2025-08-22T22:35:47.311700+00:00"
+      "published": "2025-08-22T23:36:06.847945+00:00"
     },
     {
       "id": "c9ab6742df182e4feeef012236fd0cfd",
@@ -518,7 +518,7 @@
       "title_en": "Diouf Risponde Alle Curiosità Social Nerazzurre: dal Soprannome Alla Prima Maglia da Calcio",
       "summary_it": "Andy Diouf, centrocampista francese classe 2003 arrivato del Lens e ufficializzato dall&#39;Inter in serata, ha risposto alle curiosit&agrave; dei canali social nerazzurri: &quot;Soprannome?...",
       "summary_en": "Andy Diouf, centrocampista francese classe 2003 arrivato del Lens e ufficializzato dall&#39;Inter in serata, ha risposto alle curiosit&agrave; dei canali social nerazzurri: &quot;Soprannome?...",
-      "published": "2025-08-22T22:34:39.697171+00:00"
+      "published": "2025-08-22T23:35:09.258799+00:00"
     },
     {
       "id": "24ea2916ab0e523b04f6b120467a5010",
@@ -529,7 +529,7 @@
       "title_en": "Chivu to DAZN: \"The Market is Open, we Know Which Players to Add. we Don't Want Quantity, we Want Quality.”",
       "summary_it": "Oltre all&#39;intervista di un paio di giorni fa a Sky Sport, Cristian Chivu si &egrave; soffermato anche davanti alle telecamere di DAZN proiettandosi alla nuova stagione tra campo, mercato e...",
       "summary_en": "In addition to the interview a couple of days ago with Sky Sport, Cristian Chivu also lingered in front of the DAZN cameras, projecting himself into the new season between the pitch, the market and...",
-      "published": "2025-08-22T22:32:55.083776+00:00"
+      "published": "2025-08-22T23:33:47.019155+00:00"
     },
     {
       "id": "ec0ea50b2f8b7b539b340383e7210ca9",
@@ -540,7 +540,7 @@
       "title_en": "Cesena Rallies Three Times and Stops INTER on Their Home Debut: 3-3 at the Konami Centre, a Wasted Opportunity",
       "summary_it": "L&#39;Inter di Benny Carbone si ferma subito tra le mura amiche: contro il Cesena &egrave; arrivato un pirotecnico 3-3, frutto della tripla rimonta ospite ai danni dei nerazzurri. Ad aprire le danze...",
       "summary_en": "Benny Carbone's Inter immediately stopped between the friendly walls: against Cesena came a 3-3 pyrotechnic, the result of the triple comeback against the Nerazzurri. Opening the dances...",
-      "published": "2025-08-22T22:27:44.749573+00:00"
+      "published": "2025-08-22T23:28:30.818724+00:00"
     },
     {
       "id": "4d281db76f7d0e895b196432989e7fba",
@@ -551,7 +551,7 @@
       "title_en": "Diouf's First Nerazzurri Words: \"i Immediately Said Yes, Being an Interista Means a Lot. Proud to be Here.”",
       "summary_it": "Dopo l&#39;arrivo dell&#39;ufficialit&agrave; come nuovo giocatore dell&#39;Inter, Andy Diouf, centrocampista francese classe 2003 arrivato del Lens, rilascia ai canali ufficiali del club le sue prime...",
       "summary_en": "After the official arrival as a new Inter player, Andy Diouf, a 2003 French midfielder from Lens, gives the club's official channels his first...",
-      "published": "2025-08-22T22:27:08.666810+00:00"
+      "published": "2025-08-22T23:27:55.189198+00:00"
     }
   ]
 }

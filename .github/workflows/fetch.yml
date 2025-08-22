@@ -26,8 +26,8 @@ jobs:
 
       - name: Run ingest
         env:
-          USE_LIBRETRANSLATE: "0"
-          LIBRETRANSLATE_URL: ""#"https://libretranslate.com/translate"
+          USE_LIBRETRANSLATE: "1"
+          LIBRETRANSLATE_URL: "https://libretranslate.de/translate"
           TRANSLATE_SLEEP: "1.5"
           MAX_LINKS_FROM_LISTINGS: "20"   # lower while debugging
           MAX_ARTICLE_ENRICH: "20"         # translate fewer full articles for now

@@ -237,29 +237,45 @@ def hashlib_md5(s: str) -> str:
     import hashlib as _h
     return _h.md5(s.encode("utf-8")).hexdigest()
 
+def _looks_unchanged(src: str, out: str) -> bool:
+    if not out:
+        return True
+    a = re.sub(r"\W+", "", (src or "")).lower()
+    b = re.sub(r"\W+", "", (out or "")).lower()
+    if not a or not b:
+        return True
+    # identical or very close => treat as untranslated
+    return a == b or (len(a) >= 6 and abs(len(a) - len(b)) <= 1 and (a in b or b in a))
+
 def translate_once(text: str, source="it", target="en") -> str:
-    """One-shot translate with verbose fallback; never returns API error strings."""
+    """Try MyMemory (forced MT); if unchanged, try LibreTranslate (if enabled)."""
     if not text:
         return ""
 
-    # 1) MyMemory first (free, no key)
+    # --- 1) MyMemory (force MT if available) ---
     try:
         mm = requests.get(
             "https://api.mymemory.translated.net/get",
-            params={"q": text, "langpair": f"{source}|{target}"},
+            params={
+                "q": text,
+                "langpair": f"{source}|{target}",
+                # the following hints push it toward MT output; ignored by server if unsupported
+                "mt": 1,
+                "mtonly": 1,
+            },
             timeout=TIMEOUT,
         )
         if mm.ok:
             j = mm.json()
             t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
-            if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+            if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper() and not _looks_unchanged(text, t):
                 return t
         else:
             dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
     except Exception as e:
         dbg(f"MyMemory error: {e}")
 
-    # 2) Optional LibreTranslate (only if explicitly enabled + URL present)
+    # --- 2) LibreTranslate fallback (only if enabled & URL set) ---
     if USE_LIBRETRANSLATE and LIBRETRANSLATE_URL:
         try:
             r = requests.post(
@@ -271,43 +287,19 @@ def translate_once(text: str, source="it", target="en") -> str:
                 data = r.json()
                 if isinstance(data, dict) and "translatedText" in data:
                     t = data["translatedText"] or ""
-                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                        return t
                 elif isinstance(data, list) and data and "translatedText" in data[0]:
                     t = data[0]["translatedText"] or ""
-                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                        return t
+                else:
+                    t = ""
+                if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper() and not _looks_unchanged(text, t):
+                    return t
             else:
                 dbg(f"LibreTranslate HTTP {r.status_code}: {r.text[:200]}")
         except Exception as e:
             dbg(f"LibreTranslate error: {e}")
 
-    # 3) Fail-open: return original
+    # --- 3) Fail-open: return original (unchanged) ---
     return text
-def translate_long_text(text: str, source="it", target="en") -> str:
-    """Translate long text by splitting into smaller chunks to stay under API limits."""
-    MAX_LEN = 450  # stay under MyMemory’s 500-char limit
-    parts = []
-    current = []
-    count = 0
-
-    for para in text.split("\n"):
-        if count + len(para) > MAX_LEN:
-            chunk = "\n".join(current).strip()
-            if chunk:
-                parts.append(translate_once(chunk, source, target))
-            current = [para]
-            count = len(para)
-        else:
-            current.append(para)
-            count += len(para)
-
-    if current:
-        chunk = "\n".join(current).strip()
-        if chunk:
-            parts.append(translate_once(chunk, source, target))
-
-    return "\n\n".join(parts)
 
 
 def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRANSLATE_CHARS_PER_CHUNK) -> str:
@@ -472,6 +464,11 @@ def main():
     
             # Use our new long-text translator for the body
             full_en = translate_long_text(full_it) if full_it else ""
+            
+            # Warn if it looks untranslated
+            if full_it and full_en and _looks_unchanged(full_it[:180], full_en[:180]):
+                dbg("  WARN: body first chunk still looks Italian after both services.")
+
     
             dbg(f"  title_en: {bool(title_en)} teaser_en: {bool(teaser_en)} full_en_len: {len(full_en)}")
     

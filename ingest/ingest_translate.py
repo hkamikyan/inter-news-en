@@ -115,17 +115,37 @@ def translate_cached(text: str, source="it", target="en") -> str:
 
 
 def _lt_post(text: str, source="it", target="en") -> Optional[str]:
-    """Try each LT endpoint; return translated text or None."""
-    if not (USE_LIBRETRANSLATE and LIBRETRANSLATE_URLS):
+    """
+    Try LibreTranslate endpoints. Prefer JSON request/response, fallback to form.
+    Skip endpoints that return HTML (landing pages / 403 / CF).
+    """
+    if not (USE_LIBRETRANSLATE):
         return None
-    for url in LIBRETRANSLATE_URLS:
+
+    # Gather endpoints (CSV or single var)
+    urls_csv = os.getenv("LIBRETRANSLATE_URLS", "").strip()
+    endpoints = [u.strip() for u in urls_csv.split(",") if u.strip()]
+    if not endpoints:
+        single = os.getenv("LIBRETRANSLATE_URL", "").strip()
+        if single:
+            endpoints = [single]
+    if not endpoints:
+        return None
+
+    for url in endpoints:
+        # Normalize: some instances expect '/translate', others already include it
+        endpoint = url
+        if not endpoint.endswith("/translate") and not endpoint.endswith("/translate/"):
+            endpoint = endpoint.rstrip("/") + "/translate"
+
+        # 1) Try JSON request
         try:
             r = requests.post(
-                url,
-                data={"q": text, "source": source, "target": target, "format": "text"},
+                endpoint,
+                json={"q": text, "source": source, "target": target, "format": "text"},
+                headers={"Accept": "application/json"},
                 timeout=TIMEOUT,
             )
-            # Some instances send text/plain or HTML on throttle; guard parse
             ct = r.headers.get("content-type", "")
             if r.ok and "json" in ct.lower():
                 data = r.json()
@@ -138,14 +158,37 @@ def _lt_post(text: str, source="it", target="en") -> Optional[str]:
                 if t:
                     return t
             else:
-                # Not JSON; log snippet and try next endpoint
-                dbg(f"LibreTranslate non-JSON or error from {url}: {r.status_code} {r.text[:120]}")
+                # If we got HTML or non-JSON, try form next (some instances require it)
+                if "html" in ct.lower() or not r.ok:
+                    dbg(f"LibreTranslate [{endpoint}] non-JSON ({r.status_code}); will try form.")
         except Exception as e:
-            dbg(f"LibreTranslate error @ {url}: {e}")
+            dbg(f"LibreTranslate JSON error @ {endpoint}: {e}")
+
+        # 2) Try form-encoded request
+        try:
+            r2 = requests.post(
+                endpoint,
+                data={"q": text, "source": source, "target": target, "format": "text"},
+                headers={"Accept": "application/json"},
+                timeout=TIMEOUT,
+            )
+            ct2 = r2.headers.get("content-type", "")
+            if r2.ok and "json" in ct2.lower():
+                data2 = r2.json()
+                if isinstance(data2, dict):
+                    t2 = data2.get("translatedText") or ""
+                elif isinstance(data2, list) and data2 and isinstance(data2[0], dict):
+                    t2 = data2[0].get("translatedText") or ""
+                else:
+                    t2 = ""
+                if t2:
+                    return t2
+            else:
+                dbg(f"LibreTranslate [{endpoint}] still non-JSON ({r2.status_code}) {r2.text[:120]}")
+        except Exception as e:
+            dbg(f"LibreTranslate form error @ {endpoint}: {e}")
+
     return None
-
-
-
 
 def is_article_url(resolved_url: str) -> bool:
     p = urlparse(resolved_url)

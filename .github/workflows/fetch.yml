@@ -28,10 +28,11 @@ jobs:
         env:
           USE_LIBRETRANSLATE: "1"
           LIBRETRANSLATE_URLS: "https://libretranslate-latest-atdq.onrender.com/translate"
-          TRANSLATE_SLEEP: "1.7"
-          MAX_ARTICLE_ENRICH: "8"
+          TRANSLATE_SLEEP: "1.2"
+          MAX_ARTICLE_ENRICH: "50"
+          MAX_LINKS_FROM_LISTINGS: "60"
           TRANSLATE_CHARS_PER_CHUNK: "360"
-          MAX_TRANSLATE_CHARS_BUDGET: "25000"
+          MAX_TRANSLATE_CHARS_BUDGET: "50000"
           HTTP_TIMEOUT: "45"
 
 

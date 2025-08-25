@@ -6,12 +6,18 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
+# at top-level (after imports)
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+
 # Try to import trafilatura for robust article extraction (optional)
 try:
     import trafilatura  # type: ignore
     HAS_TRAFILATURA = True
 except Exception:
     HAS_TRAFILATURA = False
+
+
 
 # ==============================
 # CONFIG
@@ -32,8 +38,7 @@ POSTS_DIR   = os.path.join(os.path.dirname(__file__), "..", "docs", "posts")
 #LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.de/translate")
 #USE_LIBRETRANSLATE = os.getenv("USE_LIBRETRANSLATE", "1") == "1"
 
-LIBRETRANSLATE_URLS = [u.strip() for u in os.getenv("LIBRETRANSLATE_URLS", "").split(",") if u.strip()]
-USE_LIBRETRANSLATE = os.getenv("USE_LIBRETRANSLATE", "1") == "1"
+#LIBRETRANSLATE_URLS = [u.strip() for u in os.getenv("LIBRETRANSLATE_URLS", "").split(",") if u.strip()]
 
 
 SLEEP_BETWEEN_CALLS = float(os.getenv("TRANSLATE_SLEEP", "1.0"))
@@ -84,6 +89,23 @@ def get_libretranslate_endpoints() -> list[str]:
 
 LIBRETRANSLATE_ENDPOINTS = get_libretranslate_endpoints()
 USE_LIBRETRANSLATE = os.getenv("USE_LIBRETRANSLATE", "1") == "1"
+
+
+# ---------- Robust HTTP session ----------
+# Separate connect/read timeouts (tuple); render LT needs generous read time
+CONNECT_TO = int(os.getenv("CONNECT_TIMEOUT", "10"))
+READ_TO    = int(os.getenv("READ_TIMEOUT", "120"))  # long for big chunks
+
+SESSION = requests.Session()
+_retries = Retry(
+    total=int(os.getenv("HTTP_TOTAL_RETRIES", "4")),
+    backoff_factor=float(os.getenv("HTTP_BACKOFF", "0.6")),
+    status_forcelist=(429, 502, 503, 504),
+    allowed_methods=frozenset(["GET", "POST"]),
+    raise_on_status=False,
+)
+SESSION.mount("http://", HTTPAdapter(max_retries=_retries))
+SESSION.mount("https://", HTTPAdapter(max_retries=_retries))
 # ==============================
 # HELPERS
 # ==============================
@@ -92,15 +114,35 @@ USE_LIBRETRANSLATE = os.getenv("USE_LIBRETRANSLATE", "1") == "1"
 def dbg(msg: str):
     print(f"[DBG] {msg}", file=sys.stderr)
 
+
+def _lt_healthcheck(ep: str) -> bool:
+    try:
+        base = ep.rstrip("/")
+        if base.endswith("/translate"):
+            base = base[: -len("/translate")]
+        r = SESSION.get(base + "/languages", timeout=(CONNECT_TO, 15))
+        return r.ok and "json" in r.headers.get("content-type", "").lower()
+    except Exception:
+        return False
+
+LIVE_LT_EPS = [ep.rstrip("/") + ("" if ep.rstrip("/").endswith("/translate") else "/translate")
+               for ep in LIBRETRANSLATE_ENDPOINTS if _lt_healthcheck(ep)]
+if LIVE_LT_EPS:
+    dbg(f"LibreTranslate live endpoints: {LIVE_LT_EPS}")
+else:
+    dbg("No live LibreTranslate endpoints detected (will still try if configured).")
+
+
+
 def ensure_dirs():
     os.makedirs(OUTPUT_PATH, exist_ok=True)
     os.makedirs(POSTS_DIR,   exist_ok=True)
 
 def http_get(url: str) -> str:
-    r = requests.get(url, headers=UA_HEADERS, timeout=TIMEOUT)
+    r = SESSION.get(url, headers=UA_HEADERS, timeout=(CONNECT_TO, TIMEOUT))
     r.raise_for_status()
     return r.text
-
+    
 CACHE_PATH = os.path.join(os.path.dirname(__file__), ".trans_cache.json")
 _translate_cache = None
 
@@ -170,72 +212,49 @@ def _post_with_retries(url: str, *, json_payload=None, form_data=None, timeout=T
 
 
 def _lt_post(text: str, source="it", target="en") -> Optional[str]:
-    """
-    Try LibreTranslate endpoints. Prefer JSON request/response, fallback to form.
-    Skip endpoints that return HTML (landing pages / 403 / CF).
-    """
-    if not (USE_LIBRETRANSLATE):
+    if not USE_LIBRETRANSLATE:
         return None
 
-    # Gather endpoints (CSV or single var)
-    urls_csv = os.getenv("LIBRETRANSLATE_URLS", "").strip()
-    endpoints = [u.strip() for u in urls_csv.split(",") if u.strip()]
-    if not endpoints:
-        single = os.getenv("LIBRETRANSLATE_URL", "").strip()
-        if single:
-            endpoints = [single]
+    endpoints = LIVE_LT_EPS or LIBRETRANSLATE_ENDPOINTS
     if not endpoints:
         return None
 
     for url in endpoints:
-        # Normalize: some instances expect '/translate', others already include it
-        endpoint = url
-        if not endpoint.endswith("/translate") and not endpoint.endswith("/translate/"):
-            endpoint = endpoint.rstrip("/") + "/translate"
+        endpoint = url if url.endswith("/translate") else url.rstrip("/") + "/translate"
 
-        # 1) Try JSON request
+        # JSON attempt via session + tuple timeouts
         try:
-            r = requests.post(
+            r = SESSION.post(
                 endpoint,
                 json={"q": text, "source": source, "target": target, "format": "text"},
                 headers={"Accept": "application/json"},
-                timeout=TIMEOUT,
+                timeout=(CONNECT_TO, READ_TO),
             )
             ct = r.headers.get("content-type", "")
             if r.ok and "json" in ct.lower():
                 data = r.json()
-                if isinstance(data, dict):
-                    t = data.get("translatedText") or ""
-                elif isinstance(data, list) and data and isinstance(data[0], dict):
-                    t = data[0].get("translatedText") or ""
-                else:
-                    t = ""
+                t = (data.get("translatedText") if isinstance(data, dict)
+                     else (data[0].get("translatedText") if isinstance(data, list) and data and isinstance(data[0], dict) else "")) or ""
                 if t:
                     return t
             else:
-                # If we got HTML or non-JSON, try form next (some instances require it)
-                if "html" in ct.lower() or not r.ok:
-                    dbg(f"LibreTranslate [{endpoint}] non-JSON ({r.status_code}); will try form.")
+                dbg(f"LibreTranslate [{endpoint}] non-JSON ({r.status_code}); trying form.")
         except Exception as e:
             dbg(f"LibreTranslate JSON error @ {endpoint}: {e}")
 
-        # 2) Try form-encoded request
+        # Form fallback
         try:
-            r2 = requests.post(
+            r2 = SESSION.post(
                 endpoint,
                 data={"q": text, "source": source, "target": target, "format": "text"},
                 headers={"Accept": "application/json"},
-                timeout=TIMEOUT,
+                timeout=(CONNECT_TO, READ_TO),
             )
             ct2 = r2.headers.get("content-type", "")
             if r2.ok and "json" in ct2.lower():
                 data2 = r2.json()
-                if isinstance(data2, dict):
-                    t2 = data2.get("translatedText") or ""
-                elif isinstance(data2, list) and data2 and isinstance(data2[0], dict):
-                    t2 = data2[0].get("translatedText") or ""
-                else:
-                    t2 = ""
+                t2 = (data2.get("translatedText") if isinstance(data2, dict)
+                      else (data2[0].get("translatedText") if isinstance(data2, list) and data2 and isinstance(data2[0], dict) else "")) or ""
                 if t2:
                     return t2
             else:
@@ -244,6 +263,8 @@ def _lt_post(text: str, source="it", target="en") -> Optional[str]:
             dbg(f"LibreTranslate form error @ {endpoint}: {e}")
 
     return None
+
+
 
 def is_article_url(resolved_url: str) -> bool:
     p = urlparse(resolved_url)
@@ -459,60 +480,81 @@ def _looks_unchanged(src: str, out: str) -> bool:
 
 
 
-def translate_once(text: str, source="it", target="en") -> str:
-    if not text:
-        return ""
+MYMEMORY_DISABLED = False
 
-    # 1) MyMemory first
+def try_mymemory(text: str, source: str, target: str) -> str:
+    global MYMEMORY_DISABLED
+    if MYMEMORY_DISABLED or not text:
+        return ""
     try:
-        mm = requests.get(
+        mm = SESSION.get(
             "https://api.mymemory.translated.net/get",
             params={"q": text, "langpair": f"{source}|{target}"},
-            timeout=TIMEOUT,
+            timeout=(CONNECT_TO, 20),
         )
+        if mm.status_code == 429:
+            dbg("MyMemory disabled for remainder of run (429).")
+            MYMEMORY_DISABLED = True
+            return ""
         if mm.ok:
             j = mm.json()
             t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
+            # Filter out warning echoes
             if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
                 return t
         else:
             dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:160]}")
     except Exception as e:
         dbg(f"MyMemory error: {e}")
+    return ""
 
-    # 2) LibreTranslate (optional; try all configured endpoints)
-    if USE_LIBRETRANSLATE and LIBRETRANSLATE_ENDPOINTS:
-        for ep in LIBRETRANSLATE_ENDPOINTS:
+
+
+def translate_once(text: str, source="it", target="en") -> str:
+    if not text:
+        return ""
+
+    # 1) Try MyMemory (cheap, sometimes decent)
+    t = try_mymemory(text, source, target)
+    if t:
+        return t
+
+    # 2) Try LibreTranslate (our own instance(s) first)
+    if USE_LIBRETRANSLATE:
+        endpoints = LIVE_LT_EPS if LIVE_LT_EPS else [
+            ep.rstrip("/") + ("" if ep.rstrip("/").endswith("/translate") else "/translate")
+            for ep in LIBRETRANSLATE_ENDPOINTS
+        ]
+        for ep in endpoints:
             try:
-                r = requests.post(
+                r = SESSION.post(
                     ep,
                     json={"q": text, "source": source, "target": target, "format": "text"},
-                    timeout=TIMEOUT + 15,  # a touch more generous
+                    headers={"Accept": "application/json"},
+                    timeout=(CONNECT_TO, READ_TO),
                 )
                 if not r.ok:
                     dbg(f"LibreTranslate HTTP {r.status_code} @ {ep}: {r.text[:160]}")
                     continue
-                # Some hosts may return HTML (maintenance pages). Guard for JSON.
-                try:
-                    data = r.json()
-                except Exception:
+                if "json" not in r.headers.get("content-type", "").lower():
                     dbg(f"LibreTranslate non-JSON @ {ep}: {r.text[:160]}")
                     continue
 
+                data = r.json()
                 if isinstance(data, dict):
-                    t = data.get("translatedText", "") or ""
-                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                        return t
+                    out = data.get("translatedText") or ""
                 elif isinstance(data, list) and data and isinstance(data[0], dict):
-                    t = data[0].get("translatedText", "") or ""
-                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                        return t
+                    out = data[0].get("translatedText") or ""
+                else:
+                    out = ""
+
+                if out and not _looks_unchanged(text[:24], out[:24]):
+                    return out
             except requests.RequestException as e:
                 dbg(f"LibreTranslate error @ {ep}: {e}")
 
-    # 3) Fail-open: return original Italian (caller may show banner)
+    # 3) Fail-open: return original so caller can display banner/original
     return text
-
 
 
 def translate_long_text(text: str, source="it", target="en") -> str:
@@ -551,13 +593,17 @@ def translate_long_text(text: str, source="it", target="en") -> str:
 
 
 def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRANSLATE_CHARS_PER_CHUNK) -> str:
-    """Translate long text in small chunks; guard against API error echoes."""
+    """
+    Smaller chunks reduce timeouts. Per-chunk one LT retry if the first attempt
+    looks unchanged. Falls back to original chunk when everything fails.
+    """
     if not long_text:
         return ""
-    max_chars = min(chunk_chars, 420)  # extra safe
+    max_chars = min(chunk_chars, 320)  # more conservative
 
+    # split by paragraphs, then by sentences if needed
     paras = [p.strip() for p in long_text.split("\n\n") if p.strip()]
-    chunks = []
+    chunks: list[str] = []
     for p in paras:
         if len(p) <= max_chars:
             chunks.append(p)
@@ -565,7 +611,7 @@ def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRAN
         parts = re.split(r"(?<=[\.\?!])\s+", p)
         buf = ""
         for part in parts:
-            if len(buf) + len(part) + 1 <= max_chars:
+            if len(buf) + len(part) + (1 if buf else 0) <= max_chars:
                 buf = f"{buf} {part}".strip() if buf else part
             else:
                 if buf:
@@ -579,12 +625,35 @@ def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRAN
         if buf:
             chunks.append(buf)
 
-    out_parts = []
+    out_parts: list[str] = []
     for c in chunks:
         t = translate_once(c, source=source, target=target)
-        if not t or "QUERY LENGTH LIMIT EXCEEDED" in t.upper():
-            t = c  # fallback to Italian chunk
-        out_parts.append(t)
+
+        # quick per-chunk retry via LT only if unchanged
+        if _looks_unchanged(c[:180], t[:180]) and USE_LIBRETRANSLATE and (LIVE_LT_EPS or LIBRETRANSLATE_ENDPOINTS):
+            eps = LIVE_LT_EPS if LIVE_LT_EPS else [
+                ep.rstrip("/") + ("" if ep.rstrip("/").endswith("/translate") else "/translate")
+                for ep in LIBRETRANSLATE_ENDPOINTS
+            ]
+            for ep in eps:
+                try:
+                    r = SESSION.post(
+                        ep,
+                        json={"q": c, "source": source, "target": target, "format": "text"},
+                        headers={"Accept": "application/json"},
+                        timeout=(CONNECT_TO, READ_TO),
+                    )
+                    if r.ok and "json" in r.headers.get("content-type", "").lower():
+                        data = r.json()
+                        t2 = (data.get("translatedText") if isinstance(data, dict)
+                              else (data[0].get("translatedText") if isinstance(data, list) and data else "")) or ""
+                        if t2 and not _looks_unchanged(c[:180], t2[:180]):
+                            t = t2
+                            break
+                except Exception as e:
+                    dbg(f"Chunk retry failed @ {ep}: {e}")
+
+        out_parts.append(t if t else c)
         time.sleep(SLEEP_BETWEEN_CALLS)
 
     return "\n\n".join(out_parts)

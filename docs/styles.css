@@ -16,18 +16,32 @@
 
 body { margin: 0; background: var(--bg); color: var(--ink); }
 
+/* --- Sticky header (merged + sticky) --- */
 header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   padding: 20px;
   border-bottom: 1px solid #1f2630;
-  backdrop-filter: saturate(120%) blur(4px);
+  background: rgba(11,14,19,0.85);
+  transition: padding .18s ease, border-color .18s ease, background .18s ease;
+}
+@supports (backdrop-filter: blur(6px)) {
+  header { backdrop-filter: saturate(120%) blur(6px); }
+}
+header.scrolled {
+  padding: 12px 20px;            /* compress */
+  border-bottom-color: #263044;  /* stronger border when scrolled */
+}
+header.scrolled h1 {
+  font-size: 1.15rem;
+  transition: font-size .18s ease;
 }
 
 h1 { margin: 0 0 6px; letter-spacing: .2px; }
 .subtitle { margin: 0 0 10px; color: var(--muted); }
 
-.meta {
-  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-}
+.meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
 #search {
   padding: 10px 12px;
@@ -63,6 +77,7 @@ main { max-width: 920px; margin: 20px auto; padding: 0 16px 40px; }
   box-shadow: var(--glow);
   border-color: #2a3446;
   background: #0f1620;
+  cursor: pointer; /* merged here */
 }
 .card:active {
   transform: translateY(0);
@@ -73,16 +88,12 @@ main { max-width: 920px; margin: 20px auto; padding: 0 16px 40px; }
   color: var(--link);
   text-decoration: none;
   font-weight: 650;
-  transition: color .15s ease, text-shadow .15s ease;
+  transition: color .15s ease, text-shadow .15s ease, text-decoration-color .15s ease;
 }
 .card a:hover { text-decoration: underline; text-shadow: 0 0 12px rgba(135,180,255,.25); }
 
 .card .date { color: var(--muted); font-size: 0.9rem; margin: 8px 0; }
 .card p { margin: 10px 0 0; line-height: 1.5; color: #d9e4f2; }
-
-/* Make the whole card feel clickable when the main link is present */
-.card:hover { cursor: pointer; }
-.card:hover a { text-decoration: underline; }
 
 /* Chip / badge */
 .chip {
@@ -105,7 +116,7 @@ footer {
   border-top: 1px solid #1f2630;
 }
 
-/* Subtle animated focus ring for keyboard users */
+/* Focus ring */
 a:focus-visible,
 button:focus-visible {
   outline: none;
@@ -113,37 +124,15 @@ button:focus-visible {
   border-radius: 8px;
 }
 
-/* Prefer-reduced-motion: be respectful */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
 
-/* Pretty scrollbar for webkit */
+/* WebKit scrollbar */
 *::-webkit-scrollbar { height: 10px; width: 10px; }
 *::-webkit-scrollbar-thumb { background: #1d2633; border-radius: 10px; border: 2px solid #0b0e13; }
 *::-webkit-scrollbar-track { background: #0b0e13; }
-
-
-/* --- Sticky header (compress on scroll) --- */
-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: rgba(11,14,19,0.85); /* same bg, slightly translucent */
-  backdrop-filter: saturate(120%) blur(6px);
-  transition: padding .18s ease, border-color .18s ease, background .18s ease;
-}
-
-header.scrolled {
-  padding: 12px 20px;            /* compress */
-  border-bottom-color: #263044;  /* slightly stronger border when scrolled */
-}
-
-/* Keep title tidy on compression */
-header.scrolled h1 {
-  font-size: 1.15rem;
-  transition: font-size .18s ease;
-}
 
 /* --- Loading shimmer skeleton --- */
 .skel {
@@ -155,33 +144,23 @@ header.scrolled h1 {
   overflow: hidden;
   position: relative;
 }
-
 .skel .bar {
   height: 14px;
   border-radius: 8px;
   background: #131a22;
   margin: 8px 0;
 }
-
 .skel .bar.title { height: 18px; width: 70%; margin-top: 2px; }
-.skel .bar.meta  { width: 35%; height: 12px; opacity: .8; }
+.skel .bar.meta  { width: 35%; height: 12px; opacity: .85; }
 .skel .bar.text  { width: 100%; }
 .skel .bar.text.short { width: 85%; }
-
 .skel::after {
   content: "";
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(135,180,255,0.08), transparent);
+  background: linear-gradient(90deg, transparent, rgba(135,180,255,0.10), transparent);
   animation: shimmer 1.2s infinite;
 }
-
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
-}
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .skel::after { animation: none; }
-}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skel::after { animation: none; } }

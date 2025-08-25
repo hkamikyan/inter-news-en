@@ -24,19 +24,25 @@ function render(articles, filter = '') {
   for (const a of articles) {
     if (q && !(a.title_en?.toLowerCase().includes(q) || a.summary_en?.toLowerCase().includes(q))) continue;
 
+    const isLocal = !!a.local_url;
+    const href = isLocal ? a.local_url : a.url;
+
+    const chip = a.pending
+      ? `<span class="chip" title="This article will auto-translate on a future run.">translation pending</span>`
+      : (isLocal ? `<span class="chip" style="opacity:.8">translated page</span>` : '');
+
+    const summary = a.summary_en || '';
+
+    const aAttrs = isLocal
+      ? `href="${href}"`
+      : `href="${href}" target="_blank" rel="noopener noreferrer"`;
+
     const div = document.createElement('div');
     div.className = 'card';
-
-    // Prefer local translated page when available
-    const href = a.local_url ? a.local_url : a.url;
-
-    // Optional badge if we're linking to a local page
-    const badge = a.local_url ? `<span style="font-size:.85rem; opacity:.8; margin-left:8px;">(translated page)</span>` : '';
-
     div.innerHTML = `
-      <a href="${href}" target="_blank" rel="noopener noreferrer">${a.title_en || a.title_it}</a>${badge}
+      <a ${aAttrs}>${a.title_en || a.title_it}</a> ${chip}
       <div class="date">${formatDate(a.published)}</div>
-      ${a.summary_en ? `<p>${a.summary_en}</p>` : ''}
+      ${summary ? `<p>${summary}</p>` : ''}
     `;
     list.appendChild(div);
   }

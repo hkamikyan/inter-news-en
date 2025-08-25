@@ -27,7 +27,8 @@ jobs:
       - name: Run ingest
         env:
           USE_LIBRETRANSLATE: "1"
-          LIBRETRANSLATE_URLS: "https://libretranslate-latest-atdq.onrender.com/translate"
+          LIBRETRANSLATE_URL: "https://libretranslate-latest-atdq.onrender.com/translate"
+          # LIBRETRANSLATE_URLS: "https://libretranslate-a/translate,https://libretranslate-b/translate"
           TRANSLATE_SLEEP: "1.2"
           MAX_ARTICLE_ENRICH: "50"
           MAX_LINKS_FROM_LISTINGS: "60"

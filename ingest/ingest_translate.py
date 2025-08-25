@@ -438,32 +438,13 @@ def hashlib_md5(s: str) -> str:
     return _h.md5(s.encode("utf-8")).hexdigest()
 
 def _normalize_for_compare(s: str) -> str:
-    # strip all non-letters/digits, lowercase
     return re.sub(r"\W+", "", (s or "")).lower()
-
-def _looks_unchanged(src: str, out: str) -> bool:
-    """Heuristic: output still basically Italian (unchanged)."""
-    if not out:
-        return True
-    a = _normalize_for_compare(src)
-    b = _normalize_for_compare(out)
-    if not a or not b:
-        return True
-    # identical or near-identical => unchanged
-    if a == b:
-        return True
-    # if the first 24 chars match tightly, also treat as unchanged
-    return _normalize_for_compare(src[:24]) == _normalize_for_compare(out[:24])
 
 TOTAL_TRANSLATED_CHARS = 0
 MAX_TRANSLATE_CHARS_BUDGET = int(os.getenv("MAX_TRANSLATE_CHARS_BUDGET", "30000"))
 
 # put this near your other globals
 MYMEMORY_DISABLED = False
-
-def _normalize_for_compare(s: str) -> str:
-    import re
-    return re.sub(r"\W+", "", (s or "")).lower()
 
 def _looks_unchanged(src: str, out: str) -> bool:
     """Heuristic to detect when the 'translation' is basically the original text."""
@@ -478,9 +459,6 @@ def _looks_unchanged(src: str, out: str) -> bool:
     # also treat as unchanged if the starts look the same
     return _normalize_for_compare(src[:24]) == _normalize_for_compare(out[:24])
 
-
-
-MYMEMORY_DISABLED = False
 
 def try_mymemory(text: str, source: str, target: str) -> str:
     global MYMEMORY_DISABLED

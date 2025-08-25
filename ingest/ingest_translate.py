@@ -43,6 +43,12 @@ MAX_LINKS_FROM_LISTINGS = int(os.getenv("MAX_LINKS_FROM_LISTINGS", "50"))
 MAX_ARTICLE_ENRICH      = int(os.getenv("MAX_ARTICLE_ENRICH", "25"))
 TRANSLATE_CHARS_PER_CHUNK = int(os.getenv("TRANSLATE_CHARS_PER_CHUNK", "420"))  # conservative
 
+# Retries / backoff for translation calls
+TRANSLATE_RETRIES = int(os.getenv("TRANSLATE_RETRIES", "3"))
+TRANSLATE_TIMEOUT = int(os.getenv("TRANSLATE_TIMEOUT", "60"))  # seconds per call
+BACKOFF_SECONDS   = float(os.getenv("TRANSLATE_BACKOFF_SECONDS", "5.0"))
+
+
 UA_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; InterNewsFetcher/3.1; +https://github.com/your/repo)",
     "Accept-Language": "it,en;q=0.9",
@@ -111,6 +117,30 @@ def translate_cached(text: str, source="it", target="en") -> str:
         c[key] = out
         _save_cache()
     return out
+
+def _post_with_retries(url: str, *, json_payload=None, form_data=None, timeout=TRANSLATE_TIMEOUT, retries=TRANSLATE_RETRIES) -> Optional[requests.Response]:
+    """
+    POST with retries and exponential backoff.
+    Returns a Response if ok, otherwise None.
+    """
+    last_err = None
+    for attempt in range(retries):
+        try:
+            if json_payload is not None:
+                r = requests.post(url, json=json_payload, timeout=timeout)
+            else:
+                r = requests.post(url, data=form_data, timeout=timeout)
+            if r.ok:
+                return r
+            else:
+                dbg(f"POST {url} -> HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            last_err = e
+            dbg(f"POST {url} attempt {attempt+1}/{retries} error: {e}")
+        time.sleep(BACKOFF_SECONDS * (attempt + 1))
+    if last_err:
+        dbg(f"POST {url} failed after {retries} attempts: {last_err}")
+    return None
 
 
 
@@ -403,138 +433,111 @@ def _looks_unchanged(src: str, out: str) -> bool:
     return _normalize_for_compare(src[:24]) == _normalize_for_compare(out[:24])
 
 def translate_once(text: str, source="it", target="en") -> str:
+    """Translate a short text. Try MyMemory (free), then LibreTranslate (your hosted).
+    Returns "" on failure so caller can mark 'pending' cleanly.
     """
-    Try MyMemory first (free). If rate-limited (429), disable it for the rest of the run.
-    Then try LibreTranslate, rotating through any endpoints provided.
-    Returns the original text only if both services fail or echo the source.
-    """
-    import os, requests
-
-    global MYMEMORY_DISABLED
-
     if not text:
         return ""
 
-    # ---------- 1) MyMemory (skip after first 429 this run) ----------
-    if not MYMEMORY_DISABLED:
-        try:
-            mm = requests.get(
-                "https://api.mymemory.translated.net/get",
-                params={
-                    "q": text,
-                    "langpair": f"{source}|{target}",
-                    "mt": 1,
-                    "mtonly": 1,  # hint to prefer MT result
-                },
-                timeout=TIMEOUT,
-            )
-            if mm.status_code == 429:
-                MYMEMORY_DISABLED = True
-                dbg("MyMemory disabled for remainder of run (429).")
-            elif mm.ok:
-                j = mm.json()
-                t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
-                if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper() and not _looks_unchanged(text, t):
-                    return t
-            else:
-                dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
-        except Exception as e:
-            dbg(f"MyMemory error: {e}")
-
-    # ---------- 2) LibreTranslate fallback (rotate endpoints) ----------
+    # 1) MyMemory (free, no key)
     try:
-        # Prefer CSV list from env; fallback to single URL var for backward compatibility
-        urls_csv = os.getenv("LIBRETRANSLATE_URLS", "").strip()
-        endpoints = [u.strip() for u in urls_csv.split(",") if u.strip()]
-        if not endpoints:
-            single = os.getenv("LIBRETRANSLATE_URL", "")
-            if single:
-                endpoints = [single]
-
-        if USE_LIBRETRANSLATE and endpoints:
-            import json
-            for url in endpoints:
-                try:
-                    r = requests.post(
-                        url,
-                        data={"q": text, "source": source, "target": target, "format": "text"},
-                        timeout=TIMEOUT,
-                    )
-                    ct = r.headers.get("content-type", "")
-                    if r.ok and "json" in ct.lower():
-                        data = r.json()
-                        if isinstance(data, dict):
-                            t = data.get("translatedText") or ""
-                        elif isinstance(data, list) and data and isinstance(data[0], dict):
-                            t = data[0].get("translatedText") or ""
-                        else:
-                            t = ""
-                        if t and not _looks_unchanged(text, t):
-                            return t
-                    else:
-                        dbg(f"LibreTranslate non-JSON or error from {url}: {r.status_code} {r.text[:120]}")
-                except Exception as e:
-                    dbg(f"LibreTranslate error @ {url}: {e}")
+        mm = requests.get(
+            "https://api.mymemory.translated.net/get",
+            params={"q": text, "langpair": f"{source}|{target}"},
+            timeout=TRANSLATE_TIMEOUT,
+        )
+        if mm.ok:
+            j = mm.json()
+            t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
+            if t and "MYMEMORY WARNING" not in t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                return t
+        else:
+            dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
     except Exception as e:
-        dbg(f"LT fallback setup error: {e}")
+        dbg(f"MyMemory error: {e}")
 
-    # ---------- 3) Give up: return original (do NOT cache originals) ----------
-    return text
+    # 2) LibreTranslate (self-hosted)
+    if USE_LIBRETRANSLATE and LIBRETRANSLATE_URL:
+        # prefer JSON body (most instances expect JSON)
+        r = _post_with_retries(
+            LIBRETRANSLATE_URL,
+            json_payload={"q": text, "source": source, "target": target, "format": "text"},
+            timeout=TRANSLATE_TIMEOUT,
+            retries=TRANSLATE_RETRIES,
+        )
+        if r and r.ok:
+            try:
+                data = r.json()
+                if isinstance(data, dict) and "translatedText" in data:
+                    t = data["translatedText"] or ""
+                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                        return t
+                elif isinstance(data, list) and data and "translatedText" in data[0]:
+                    t = data[0]["translatedText"] or ""
+                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                        return t
+            except Exception as je:
+                dbg(f"LibreTranslate JSON parse error: {je}  body[:200]={r.text[:200]}")
+        # as a fallback, try form-encoded once (some instances accept only form data)
+        r = _post_with_retries(
+            LIBRETRANSLATE_URL,
+            form_data={"q": text, "source": source, "target": target, "format": "text"},
+            timeout=TRANSLATE_TIMEOUT,
+            retries=max(1, TRANSLATE_RETRIES // 2),
+        )
+        if r and r.ok:
+            try:
+                data = r.json()
+                if isinstance(data, dict) and "translatedText" in data:
+                    t = data["translatedText"] or ""
+                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                        return t
+                elif isinstance(data, list) and data and "translatedText" in data[0]:
+                    t = data[0]["translatedText"] or ""
+                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                        return t
+            except Exception as je:
+                dbg(f"LibreTranslate (form) JSON parse error: {je} body[:200]={r.text[:200]}")
+
+    # 3) Exhausted: return empty (signals 'pending')
+    return ""
+
 
 
 def translate_long_text(text: str, source="it", target="en") -> str:
-    """Chunk + sub-chunk with caching and budget awareness."""
+    """
+    Chunk long text conservatively for MyMemory, then use translate_once on each chunk.
+    If *every* chunk fails (translate_once returns ""), overall returns "" to mark 'pending'.
+    """
     if not text:
         return ""
+    MAX_LEN = 450  # under MyMemory limits
+    parts, buf_len, buf = [], 0, []
 
-    max_chars = min(TRANSLATE_CHARS_PER_CHUNK, 360)
-    paras = [p.strip() for p in text.split("\n\n") if p.strip()]
-    out_paras = []
+    # split by paragraphs; pack until ~MAX_LEN
+    for para in (text.split("\n\n")):
+        p = para.strip()
+        if not p:
+            continue
+        if buf_len + len(p) + (2 if buf else 0) > MAX_LEN:
+            parts.append("\n\n".join(buf))
+            buf, buf_len = [p], len(p)
+        else:
+            buf.append(p)
+            buf_len += (2 if buf_len else 0) + len(p)
+    if buf:
+        parts.append("\n\n".join(buf))
 
-    def split_sentences(s: str) -> list[str]:
-        parts = re.split(r"(?<=[\.\?!])\s+", s)
-        out, buf = [], ""
-        for part in parts:
-            if len((buf + " " + part).strip()) <= max_chars:
-                buf = (buf + " " + part).strip() if buf else part
-            else:
-                if buf:
-                    out.append(buf)
-                if len(part) <= max_chars:
-                    buf = part
-                else:
-                    for i in range(0, len(part), max_chars):
-                        out.append(part[i:i+max_chars])
-                    buf = ""
-        if buf:
-            out.append(buf)
-        return out
+    out_chunks, successes = [], 0
+    for chunk in parts:
+        t = translate_once(chunk, source=source, target=target)
+        if t:
+            successes += 1
+            out_chunks.append(t)
+        time.sleep(SLEEP_BETWEEN_CALLS)
 
-    for p in paras:
-        chunks = []
-        for s in split_sentences(p):
-            if len(s) <= max_chars:
-                chunks.append(s)
-            else:
-                for i in range(0, len(s), max_chars):
-                    chunks.append(s[i:i+max_chars])
+    return "\n\n".join(out_chunks) if successes else ""
 
-        translated_chunks = []
-        for ctext in chunks:
-            t = translate_cached(ctext, source=source, target=target)
-            if _looks_unchanged(ctext, t):
-                tiny_parts = re.split(r"(?<=[,;:])\s+", ctext)
-                tiny_out = []
-                for tp in tiny_parts:
-                    tt = translate_cached(tp, source=source, target=target)
-                    tiny_out.append(tt if not _looks_unchanged(tp, tt) else tp)
-                    time.sleep(SLEEP_BETWEEN_CALLS)
-                t = " ".join(tiny_out)
-            translated_chunks.append(t)
-            time.sleep(SLEEP_BETWEEN_CALLS)
-        out_paras.append("\n".join(translated_chunks))
-
-    return "\n\n".join(out_paras)
 
 def translate_chunked(long_text: str, source="it", target="en", chunk_chars=TRANSLATE_CHARS_PER_CHUNK) -> str:
     """Translate long text in small chunks; guard against API error echoes."""
@@ -620,7 +623,7 @@ def render_post_html(
     has_en = bool(full_en_html)
     has_it = bool(full_it_html)
 
-    # Build the main article block once
+    # Main article block
     if has_en:
         article_block = f"<h3>Article</h3>\n{full_en_html}"
     elif has_it:
@@ -644,32 +647,37 @@ def render_post_html(
       display:inline-block; padding:10px 14px; border:1px solid #2a3240; border-radius:8px;
       background:#0e1218; color:#87b4ff; text-decoration:none; font-weight:600;
     }}
-    .src-note {{ color:#9fb0c5; font-size:0.9rem; margin-top: 8px; }}
+    .src-note {{ color:#9fb0c5; font-size:0.9rem; margin-top:8px; }}
     .date {{ color:#9fb0c5; font-size:.95rem; margin:6px 0 14px; }}
     .muted {{ color:#9fb0c5; }}
+    .back {{ display:inline-block; margin:6px 0 14px; }}
   </style>
 </head>
 <body>
   <main style="max-width: 920px; margin: 24px auto; padding: 0 16px;">
-    <h1 style="margin-bottom:4px;">{title_en}</h1>
-    <p class="date">Published: {published_iso}</p>
+    <a class="back" href="../index.html">← Back to home</a>
+    <article>
+      <h1 style="margin-bottom:4px;">{title_en}</h1>
+      <p class="date">Published: <time datetime="{published_iso}">{published_iso}</time></p>
 
-    {"<p>"+teaser_en+"</p>" if teaser_en else ""}
+      {"<p>"+teaser_en+"</p>" if teaser_en else ""}
 
-    {article_block}
+      {article_block}
 
-    <p class="src-note">Source (Italian): <a href="{source_url}" target="_blank" rel="noopener noreferrer">{source_url}</a></p>
-    <p><a class="btn" href="{source_url}" target="_blank" rel="noopener noreferrer">Read original on FCInterNews</a></p>
+      <p class="src-note">Source (Italian): <a href="{source_url}" target="_blank" rel="noopener noreferrer">{source_url}</a></p>
+      <p><a class="btn" href="{source_url}" target="_blank" rel="noopener noreferrer">Read original on FCInterNews</a></p>
 
-    <hr style="border:0;border-top:1px solid #1f2630;margin:24px 0;">
-    <details>
-      <summary>Show original (Italian) teaser/body</summary>
-      {"<p>"+teaser_it+"</p>" if teaser_it else "<p class='muted'>(no teaser available)</p>"}
-      {("<h4>Testo originale</h4>"+full_it_html) if full_it_html else ""}
-    </details>
+      <hr style="border:0;border-top:1px solid #1f2630;margin:24px 0;">
+      <details>
+        <summary>Show original (Italian) teaser/body</summary>
+        {"<p>"+teaser_it+"</p>" if teaser_it else "<p class='muted'>(no teaser available)</p>"}
+        {("<h4>Testo originale</h4>"+full_it_html) if full_it_html else ""}
+      </details>
+    </article>
   </main>
 </body>
 </html>"""
+
 
 
 # ==============================
@@ -690,49 +698,68 @@ def main():
         except Exception as ex:
             print(f"[WARN] Listing fetch failed {url}: {ex}", file=sys.stderr)
 
+    # Dedupe and cap
     links = list(dict.fromkeys(links))[:MAX_LINKS_FROM_LISTINGS]
     items: List[Dict] = []
 
     # 2) Enrich subset: meta + full text + translation
     for href in links[:MAX_ARTICLE_ENRICH]:
+        title_it = teaser_it = full_it = ""
+        title_en = teaser_en = full_en = ""
+        published = datetime.now(timezone.utc).isoformat()
+        pending = False
+
         try:
             article_html = http_get(href)
             title_it, teaser_it, published = extract_meta(article_html)
             full_it = extract_fulltext(article_html, url=href)
-    
+
             dbg(f"URL: {href}")
             dbg(f"  title_it: {bool(title_it)} teaser_it: {bool(teaser_it)} full_it_len: {len(full_it)}")
-    
-            # --- translate ---
-            title_en = nice_en_title(translate_once(title_it))
+
+            # --- translate (short) ---
+            title_en = nice_en_title(translate_once(title_it)) if title_it else ""
             time.sleep(SLEEP_BETWEEN_CALLS)
-    
+
             teaser_en = translate_once(teaser_it) if teaser_it else ""
             if teaser_it:
                 time.sleep(SLEEP_BETWEEN_CALLS)
-    
-            # Use our new long-text translator for the body
+
+            # --- translate (long/body) ---
             full_en = translate_long_text(full_it) if full_it else ""
-            
-            # Warn if it looks untranslated
+
+            # If we have original content but English is missing, mark pending
+            if (title_it and not title_en) or (teaser_it and not teaser_en) or (full_it and not full_en):
+                pending = True
+
+            # Warn if it looks untranslated despite having output
             if full_it and full_en and _looks_unchanged(full_it[:180], full_en[:180]):
                 dbg("  WARN: body first chunk still looks Italian after both services.")
 
-    
             dbg(f"  title_en: {bool(title_en)} teaser_en: {bool(teaser_en)} full_en_len: {len(full_en)}")
-    
+
         except Exception as ex:
             print(f"[WARN] Article fetch failed {href}: {ex}", file=sys.stderr)
-            # minimal placeholders if fetch/extract failed
-            title_it, teaser_it, published, full_it = "", "", datetime.now(timezone.utc).isoformat(), ""
-            title_en, teaser_en, full_en = "", "", ""
-    
+            # keep the minimal placeholders set above; pending stays False
+
+        # Safety: if we still don't have an English title, fall back to prettified Italian for display
+        if not title_en and title_it:
+            title_en = nice_en_title(title_it)
+
+        # Write the post page (will show Italian + banner automatically when no full_en)
         post_id = hashlib_md5(href)
         post_path = os.path.join(POSTS_DIR, f"{post_id}.html")
         with open(post_path, "w", encoding="utf-8") as f:
-            f.write(render_post_html(title_en, title_it, teaser_en, teaser_it, full_en, full_it, href, published))
+            f.write(
+                render_post_html(
+                    title_en, title_it,
+                    teaser_en, teaser_it,
+                    full_en, full_it,
+                    href, published
+                )
+            )
         dbg(f"  wrote: {post_path}")
-    
+
         items.append({
             "id": post_id,
             "feed": "article",
@@ -743,14 +770,17 @@ def main():
             "summary_it": teaser_it,
             "summary_en": teaser_en,
             "published": published,
+            "pending": pending,
         })
 
-    # 3) Lightweight pages for the rest
+    # 3) Lightweight pages for the rest (title-only pages)
     now_iso = datetime.now(timezone.utc).isoformat()
     for href in links[MAX_ARTICLE_ENRICH:]:
         slug = urlparse(href).path.rstrip("/").split("/")[-1].replace("-", " ").strip()
         title_it = slug if slug else href
-        title_en = nice_en_title(translate_once(title_it))
+        title_en = nice_en_title(translate_once(title_it)) if title_it else ""
+        if not title_en:
+            title_en = nice_en_title(title_it)
         time.sleep(SLEEP_BETWEEN_CALLS)
 
         post_id = hashlib_md5(href)
@@ -768,6 +798,7 @@ def main():
             "summary_it": "",
             "summary_en": "",
             "published": now_iso,
+            "pending": False,
         })
 
     # 4) Write JSON
@@ -783,5 +814,7 @@ def main():
 
     print(f"[INFO] Wrote {len(items)} items to {OUTPUT_FILE}")
 
+
 if __name__ == "__main__":
     main()
+

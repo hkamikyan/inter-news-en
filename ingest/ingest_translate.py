@@ -59,6 +59,31 @@ ARTICLE_TAIL = re.compile(r"-\d{5,}/?$")
 EXCLUDE_FIRST_SEGMENTS = {"web-tv", "sondaggi", "calendario_classifica", "tag", "topic", "categoria", "category", "gallery"}
 ALLOW_FIRST_SEGMENTS   = {"news", "mercato", "in-primo-piano", "focus"}
 
+
+# ---- Translation endpoints ----
+# New: comma-separated list (preferred)
+_RAW_LT = os.getenv("LIBRETRANSLATE_URLS", "").strip()
+
+# Back-compat: single URL (old env var)
+_SINGLE_LT = os.getenv("LIBRETRANSLATE_URL", "").strip()
+
+def get_libretranslate_endpoints() -> list[str]:
+    urls: list[str] = []
+    if _RAW_LT:
+        urls.extend([u.strip() for u in _RAW_LT.split(",") if u.strip()])
+    if _SINGLE_LT:
+        urls.append(_SINGLE_LT)
+    # de-dup while preserving order
+    seen = set()
+    out = []
+    for u in urls:
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
+
+LIBRETRANSLATE_ENDPOINTS = get_libretranslate_endpoints()
+USE_LIBRETRANSLATE = os.getenv("USE_LIBRETRANSLATE", "1") == "1"
 # ==============================
 # HELPERS
 # ==============================
@@ -432,75 +457,61 @@ def _looks_unchanged(src: str, out: str) -> bool:
     # also treat as unchanged if the starts look the same
     return _normalize_for_compare(src[:24]) == _normalize_for_compare(out[:24])
 
+
+
 def translate_once(text: str, source="it", target="en") -> str:
-    """Translate a short text. Try MyMemory (free), then LibreTranslate (your hosted).
-    Returns "" on failure so caller can mark 'pending' cleanly.
-    """
     if not text:
         return ""
 
-    # 1) MyMemory (free, no key)
+    # 1) MyMemory first
     try:
         mm = requests.get(
             "https://api.mymemory.translated.net/get",
             params={"q": text, "langpair": f"{source}|{target}"},
-            timeout=TRANSLATE_TIMEOUT,
+            timeout=TIMEOUT,
         )
         if mm.ok:
             j = mm.json()
             t = (j.get("responseData", {}) or {}).get("translatedText", "") or ""
-            if t and "MYMEMORY WARNING" not in t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+            if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
                 return t
         else:
-            dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:200]}")
+            dbg(f"MyMemory HTTP {mm.status_code}: {mm.text[:160]}")
     except Exception as e:
         dbg(f"MyMemory error: {e}")
 
-    # 2) LibreTranslate (self-hosted)
-    if USE_LIBRETRANSLATE and LIBRETRANSLATE_URL:
-        # prefer JSON body (most instances expect JSON)
-        r = _post_with_retries(
-            LIBRETRANSLATE_URL,
-            json_payload={"q": text, "source": source, "target": target, "format": "text"},
-            timeout=TRANSLATE_TIMEOUT,
-            retries=TRANSLATE_RETRIES,
-        )
-        if r and r.ok:
+    # 2) LibreTranslate (optional; try all configured endpoints)
+    if USE_LIBRETRANSLATE and LIBRETRANSLATE_ENDPOINTS:
+        for ep in LIBRETRANSLATE_ENDPOINTS:
             try:
-                data = r.json()
-                if isinstance(data, dict) and "translatedText" in data:
-                    t = data["translatedText"] or ""
-                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                        return t
-                elif isinstance(data, list) and data and "translatedText" in data[0]:
-                    t = data[0]["translatedText"] or ""
-                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                        return t
-            except Exception as je:
-                dbg(f"LibreTranslate JSON parse error: {je}  body[:200]={r.text[:200]}")
-        # as a fallback, try form-encoded once (some instances accept only form data)
-        r = _post_with_retries(
-            LIBRETRANSLATE_URL,
-            form_data={"q": text, "source": source, "target": target, "format": "text"},
-            timeout=TRANSLATE_TIMEOUT,
-            retries=max(1, TRANSLATE_RETRIES // 2),
-        )
-        if r and r.ok:
-            try:
-                data = r.json()
-                if isinstance(data, dict) and "translatedText" in data:
-                    t = data["translatedText"] or ""
-                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                        return t
-                elif isinstance(data, list) and data and "translatedText" in data[0]:
-                    t = data[0]["translatedText"] or ""
-                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
-                        return t
-            except Exception as je:
-                dbg(f"LibreTranslate (form) JSON parse error: {je} body[:200]={r.text[:200]}")
+                r = requests.post(
+                    ep,
+                    json={"q": text, "source": source, "target": target, "format": "text"},
+                    timeout=TIMEOUT + 15,  # a touch more generous
+                )
+                if not r.ok:
+                    dbg(f"LibreTranslate HTTP {r.status_code} @ {ep}: {r.text[:160]}")
+                    continue
+                # Some hosts may return HTML (maintenance pages). Guard for JSON.
+                try:
+                    data = r.json()
+                except Exception:
+                    dbg(f"LibreTranslate non-JSON @ {ep}: {r.text[:160]}")
+                    continue
 
-    # 3) Exhausted: return empty (signals 'pending')
-    return ""
+                if isinstance(data, dict):
+                    t = data.get("translatedText", "") or ""
+                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                        return t
+                elif isinstance(data, list) and data and isinstance(data[0], dict):
+                    t = data[0].get("translatedText", "") or ""
+                    if t and "QUERY LENGTH LIMIT EXCEEDED" not in t.upper():
+                        return t
+            except requests.RequestException as e:
+                dbg(f"LibreTranslate error @ {ep}: {e}")
+
+    # 3) Fail-open: return original Italian (caller may show banner)
+    return text
 
 
 
